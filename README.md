@@ -28,7 +28,7 @@ The implementation is split into three distinct parts:
 
 * A (public) API which you interactive with.
     * Allowing you to upload/store files.
-    * ALlowing you to download/retrieve files.
+    * Allowing you to download/retrieve files.
 
 * A blob-server.
     * The blob-servers are the things that actually store the data.
@@ -110,7 +110,7 @@ Production Usage
 
 Launching the various services under `plackup` with the `Twiggy` driver will give better performance and more scalability, and can be done like so:
 
-**NOTE**: We're launching the upload server only listening uopn the loopback adapter:
+**NOTE**: We're launching the upload server only listening upon the loopback adapter:
 
    $ plackup -Ilib/ -s Twiggy --workers=4 -0 127.0.0.1 -p 9991 -a bin/upload-server --access-log logs/uploads.log -E production
 
