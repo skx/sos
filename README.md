@@ -8,6 +8,19 @@ Files can be replicated across a number hosts to ensure redundancy,
 and despite the naive implementation it scales easily to thousands of files.
 
 
+Dependencies
+------------
+
+The code is 100% pure-perl, and requires only a minimal set of dependencies, which are available to the Stable release of Debian GNU/Linux:
+
+    apt-get install libdancer-perl libjson-perl
+
+For production use I'd recommend the use of plack:
+
+    apt-get install libplack-perl twiggy
+
+
+
 Overview
 --------
 
