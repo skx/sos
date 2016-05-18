@@ -86,7 +86,7 @@ exit
 #
 # Populate the servers we know about
 #
-my $util = SOS::Util->new();
+my $util    = SOS::Util->new();
 my @servers = $util->servers();
 
 
@@ -117,7 +117,7 @@ my %data = populateObjects();
 # Ensure that the user isn't tryign to replicate more than the
 # number of servers.
 #
-if ( $CONFIG{'copies'} > scalar(@servers) )
+if ( $CONFIG{ 'copies' } > scalar(@servers) )
 {
     my $avail = scalar(@servers);
 
@@ -174,7 +174,7 @@ foreach my $object_id ( keys %objects )
         $CONFIG{ 'verbose' } &&
           print "$replicas copies of $object_id required: $CONFIG{'copies'}\n";
 
-        replicate_object($object_id, ($CONFIG{'copies'} - $replicas ));
+        replicate_object( $object_id, ( $CONFIG{ 'copies' } - $replicas ) );
     }
 }
 $CONFIG{ 'verbose' } && print "\nReplication scan complete.\n";
@@ -188,7 +188,7 @@ exit(0);
 #
 sub replicate_object
 {
-    my ($id,$copies_needed) = (@_);
+    my ( $id, $copies_needed ) = (@_);
 
     $CONFIG{ 'verbose' } && print "Attempting to replicate $id\n";
 
@@ -225,14 +225,14 @@ sub replicate_object
         }
     }
 
-    while( $copies_needed > 0 )
+    while ( $copies_needed > 0 )
     {
         #
         #  Now we need to pick a server at random to upload the content to.
         #
-        my $r = rand @missing;
+        my $r      = rand @missing;
         my $random = $missing[$r];
-        delete($missing[$r]);
+        delete( $missing[$r] );
 
         die "Failed to find random server to upload to" unless ($random);
         $CONFIG{ 'verbose' } && print "\tReplicating to $random\n";
