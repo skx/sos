@@ -10,3 +10,9 @@
 ./Makefile.PL
 ./MANIFEST
 ./MANIFEST.SKIP
+./t/load-modules.t
+./t/manifest.t
+./t/pod-coverage.t
+./t/pod.t
+./t/style-no-tabs.t
+./t/test-strict.t
