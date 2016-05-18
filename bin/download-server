@@ -1,0 +1,53 @@
+#!/usr/bin/perl -Ilib/ -I../lib/
+
+=head1 NAME
+
+download-server - The SOS download-server.
+
+=cut
+
+=head1 SYNOPSIS
+
+  download-server [options]
+
+
+  Path Options:
+
+   --port       Specify the port to run upon
+
+=cut
+
+=head1 OVERVIEW
+
+* Reads servers from /etc/sso.conf or  ~/.sos.conf.
+
+* Allows downloads to be made of previously uploaded content.
+
+=cut
+
+=head1 LICENSE
+
+This module is free software; you can redistribute it and/or modify it
+under the terms of either:
+
+a) the GNU General Public License as published by the Free Software
+Foundation; either version 2, or (at your option) any later version,
+or
+
+b) the Perl "Artistic License".
+
+=cut
+
+=head1 AUTHOR
+
+Steve Kemp <steve@steve.org.uk>
+
+=cut
+
+use strict;
+use warnings;
+
+use Dancer;
+use SOS::Server::Download;
+
+dance;

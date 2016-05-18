@@ -1,0 +1,73 @@
+#!/usr/bin/perl -Ilib/ -I../lib/
+
+=head1 NAME
+
+blob-server - The SOS blob server.
+
+=cut
+
+=head1 SYNOPSIS
+
+  blob-server [options] path/to/storage/directory
+
+
+  Path Options:
+
+   --port       Specify the port to run upon.
+
+=cut
+
+=head1 LICENSE
+
+This module is free software; you can redistribute it and/or modify it
+under the terms of either:
+
+a) the GNU General Public License as published by the Free Software
+Foundation; either version 2, or (at your option) any later version,
+or
+
+b) the Perl "Artistic License".
+
+=cut
+
+=head1 AUTHOR
+
+Steve Kemp <steve@steve.org.uk>
+
+=cut
+
+
+use strict;
+use warnings;
+
+use Dancer;
+use File::Path qw! make_path !;
+use SOS::Server::Blob;
+
+
+#
+#  Get the storage-directory
+#
+my $data = $ARGV[0] || undef;
+
+#
+#  If we didn't get one then abort.
+#
+if ( !$data )
+{
+    print "Usage: $0 --port=1234 path/to/data/store\n";
+    exit(0);
+}
+
+#
+#  If the storage directory doesn't exist then create it
+#
+make_path( $data,
+           {  verbose => 0,
+              mode    => 0755,
+           } )
+  unless ( -d $data );
+
+$ENV{ "STORAGE" } = $data;
+
+dance;

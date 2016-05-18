@@ -1,0 +1,321 @@
+#!/usr/bin/perl -Ilib/ -I../lib/
+
+=head1 NAME
+
+replicate - The SOS replication utility
+
+=cut
+
+=head1 SYNOPSIS
+
+  replicate [options]
+
+
+  Path Options:
+
+   --min-copies  Specify the minimum copies of data required.
+
+=cut
+
+=head1 OVERVIEW
+
+* Reads servers from /etc/sso.conf or  ~/.sos.conf.
+
+* Replicates.
+
+* Lovely.
+
+=cut
+
+
+=head1 LICENSE
+
+This module is free software; you can redistribute it and/or modify it
+under the terms of either:
+
+a) the GNU General Public License as published by the Free Software
+Foundation; either version 2, or (at your option) any later version,
+or
+
+b) the Perl "Artistic License".
+
+=cut
+
+=head1 AUTHOR
+
+Steve Kemp <steve@steve.org.uk>
+
+=cut
+
+
+use strict;
+use warnings;
+
+use Getopt::Long;
+use JSON;
+use LWP::UserAgent;
+use Pod::Usage;
+use SOS::Util;
+
+my @BS;
+
+#
+#  Default options
+#
+my %CONFIG;
+$CONFIG{ 'copies' }  = 2;
+$CONFIG{ 'verbose' } = 0;
+
+
+#
+#  Parse options from the command-line.
+#
+exit
+  if (
+    !GetOptions(
+
+        # Help options
+        "help",         \$CONFIG{ 'help' },
+        "manual",       \$CONFIG{ 'manual' },
+        "verbose",      \$CONFIG{ 'verbose' },
+        "min-copies=i", \$CONFIG{ 'copies' },
+    ) );
+
+
+
+#
+# Populate the servers we know about
+#
+my $util = SOS::Util->new();
+my @servers = $util->servers();
+
+
+#
+# If we have no servers then we must abort.
+#
+if ( !scalar(@servers) )
+{
+    print <<EOF;
+In order to rebalance/replicate you must define a list of your object-servers.
+
+The list of servers should be placed in either:
+
+~/.sos.conf
+/etc/sos.conf
+
+EOF
+    exit(0);
+}
+
+#
+# Get the list of files on each server.
+#
+my %data = populateObjects();
+
+
+#
+# Ensure that the user isn't tryign to replicate more than the
+# number of servers.
+#
+if ( $CONFIG{'copies'} > scalar(@servers) )
+{
+    my $avail = scalar(@servers);
+
+    print <<EOF;
+You've asked for an impossible number of replicated-copies:
+
+* You have $avail blob-servers available.
+* You've asked for $CONFIG{'copies'}.
+EOF
+    exit(1);
+}
+
+
+#
+#
+# OK so we have a list of servers, and the objects each contains.
+#
+# We want to make sure that each object is stored in at least
+# two servers.
+#
+# So we want to build up a list of unique objects.
+#
+my %objects;
+
+foreach my $server ( sort keys %data )
+{
+    $CONFIG{ 'verbose' } && print "Objects stored on blob-server $server\n";
+    foreach my $id ( keys %{ $data{ $server } } )
+    {
+        $CONFIG{ 'verbose' } && print "\t$id\n";
+        $objects{ $id } += 1;
+    }
+    $CONFIG{ 'verbose' } && print "\n";
+}
+
+
+#
+#  Unique objects.
+#
+$CONFIG{ 'verbose' } && print "\nBeginning replication scan.\n";
+
+foreach my $object_id ( keys %objects )
+{
+    #
+    # The number of copies of this file which exists.
+    #
+    my $replicas = $objects{ $object_id };
+
+    #
+    #  If it is too-few then we need to replicate it.
+    #
+    if ( $replicas < $CONFIG{ 'copies' } )
+    {
+        $CONFIG{ 'verbose' } &&
+          print "$replicas copies of $object_id required: $CONFIG{'copies'}\n";
+
+        replicate_object($object_id, ($CONFIG{'copies'} - $replicas ));
+    }
+}
+$CONFIG{ 'verbose' } && print "\nReplication scan complete.\n";
+#
+exit(0);
+
+
+
+#
+# Replicate the given file
+#
+sub replicate_object
+{
+    my ($id,$copies_needed) = (@_);
+
+    $CONFIG{ 'verbose' } && print "Attempting to replicate $id\n";
+
+    #
+    #  First of all find out where this file is located
+    #
+    my $location;
+    foreach my $server ( keys %data )
+    {
+        $location = $server if ( $data{ $server }{ $id } );
+    }
+
+
+    #
+    #  If we didn't find it then we're screwed
+    #
+    die "Failed to find node containing $id" unless $location;
+
+
+    #
+    #  Now we need to find a server which doesn't have the file.
+    #
+    my @missing;
+    foreach my $server ( sort keys %data )
+    {
+        if ( $data{ $server }{ $id } )
+        {
+            print "\tFound on $server\n";
+        }
+        else
+        {
+            print "\t$server is a possible target for replication\n";
+            push( @missing, $server );
+        }
+    }
+
+    while( $copies_needed > 0 )
+    {
+        #
+        #  Now we need to pick a server at random to upload the content to.
+        #
+        my $r = rand @missing;
+        my $random = $missing[$r];
+        delete($missing[$r]);
+
+        die "Failed to find random server to upload to" unless ($random);
+        $CONFIG{ 'verbose' } && print "\tReplicating to $random\n";
+
+        #
+        #  OK we've now got to download the content
+        #
+        my $lwp = LWP::UserAgent->new;
+        my $uri = $location . "/blob/$id";
+        my $res = $lwp->get($uri);
+
+        if ( $res->is_success() )
+        {
+            #
+            #  We have the data now
+            #
+            my $data = $res->decoded_content();
+
+            #
+            #  Now upload to new location
+            #
+            my $req = HTTP::Request->new( 'POST', $random . "/blob/$id" );
+            $req->content($data);
+
+            my $res = $lwp->request($req);
+            if ( $res->is_success() )
+            {
+                print "\tReplication successful\n";
+            }
+            else
+            {
+                print "\tFAILED " . $res->status_line() . "\n";
+            }
+        }
+        else
+        {
+            die "Failed to download $uri to replicate to $random";
+        }
+
+        $copies_needed -= 1;
+    }
+}
+
+#
+# Populate a hash of each known object on each server.
+#
+sub populateObjects
+{
+    my %ret;
+
+    foreach my $server ( sort(@servers) )
+    {
+        #
+        #  Ensure this server has an empty hash against it.
+        #
+        my %x;
+        $ret{ $server } = \%x;
+
+        $CONFIG{ 'verbose' } &&
+          print "Downloading contents of blob-server $server\n";
+
+        my $lwp = LWP::UserAgent->new;
+
+        my $uri = $server . "/blob";
+        my $res = $lwp->get($uri);
+
+        if ( $res->is_success() )
+        {
+            my $ids = decode_json( $res->decoded_content() );
+
+            foreach my $id (@$ids)
+            {
+                $ret{ $server }{ $id } = 1;
+            }
+        }
+        else
+        {
+            die "Failed to download contents from server $server";
+        }
+    }
+    $CONFIG{ 'verbose' } &&
+      print "\n";
+
+    return (%ret);
+
+}
