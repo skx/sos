@@ -66,13 +66,21 @@ func ListHandler(res http.ResponseWriter, req *http.Request) {
 	var list []string
 
 	files, _ := ioutil.ReadDir(ROOT)
-	for _, f := range files {
-		list = append(list, f.Name())
-	}
 
-	// Now output that to JSON
-	mapB, _ := json.Marshal(list)
-	fmt.Fprintf(res, string(mapB))
+	//
+	// If the list is non-empty then build up an array
+	// of the names, then send as JSON.
+	//
+	if len(files) > 0 {
+		for _, f := range files {
+			list = append(list, f.Name())
+		}
+
+		mapB, _ := json.Marshal(list)
+		fmt.Fprintf(res, string(mapB))
+	} else {
+		fmt.Fprintf(res, "[]")
+	}
 }
 
 /**
