@@ -110,6 +110,9 @@ Production Usage
 
 * The blob-servers should be reachable by the hosts running the API-service, but they do not need to be publicly visible, these should be firewalled.
 
+* None of the servers need to be launched as root, because they don't bind to privileged ports, or require special access.
+    * **NOTE**: Once [issue #6](https://github.com/skx/sos/issues/6) is implemented root privileges will be required for a successful `chroot()`, however if that fails things are not terrible.
+
 
 
 Future Changes?
