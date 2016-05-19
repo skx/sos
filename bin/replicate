@@ -55,9 +55,8 @@ use Getopt::Long;
 use JSON;
 use LWP::UserAgent;
 use Pod::Usage;
-use SOS::Util;
 
-my @BS;
+
 
 #
 #  Default options
@@ -86,8 +85,15 @@ exit
 #
 # Populate the servers we know about
 #
-my $util    = SOS::Util->new();
-my @servers = $util->servers();
+my @servers;
+read_file("/etc/sos.conf");
+read_file( $ENV{ 'HOME' } . "/.sos.conf" );
+
+
+#
+#  Now remove any servers which are offline.
+#
+remove_dead_servers();
 
 
 #
@@ -318,4 +324,75 @@ sub populateObjects
 
     return (%ret);
 
+}
+
+
+=begin doc
+
+Take each of our global servers, as stored in C<@servers>
+and make a copy of those server-names which are alive and reachable.
+
+=end doc
+
+=cut
+
+sub remove_dead_servers
+{
+
+    #
+    #  We'll test each server is alive before using it.
+    #
+    my @result;
+
+    my $ua = LWP::UserAgent->new;
+    $ua->timeout(10);
+    $ua->env_proxy;
+
+    foreach my $s (@servers)
+    {
+        my $response = $ua->get( $s . '/alive' );
+        my $code     = $response->code();
+        my $body     = $response->decoded_content();
+
+        if ( $body && $body =~ /^alive$/i )
+        {
+            push( @result, $s );
+        }
+        else
+        {
+            warn "Server offline $s: $code";
+        }
+    }
+
+    @servers = @result;
+}
+
+
+=begin doc
+
+Add any valid server we find in the named file to the global
+C<@servers> array.
+
+=end doc
+
+=cut
+
+sub read_file
+{
+    my ($file) = (@_);
+
+    return unless -e $file;
+
+    open( my $handle, "<", $file ) or
+      return;
+    while ( my $line = <$handle> )
+    {
+        next unless $line;
+        chomp($line);
+
+        next if ( $line =~ /^\#/ );
+
+        push( @servers, $line );
+    }
+    close($handle);
 }
