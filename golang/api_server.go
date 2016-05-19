@@ -15,9 +15,11 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"crypto/sha1"
 	"flag"
 	"fmt"
 	"github.com/gorilla/mux"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"sync"
@@ -29,6 +31,18 @@ import (
  * It is populated by reading ~/.sos.conf and /etc/sos.conf
  */
 var SERVERS []string
+
+/**
+ * This is a helper for allowing us to consume a HTTP-body more than once.
+ */
+type myReader struct {
+	*bytes.Buffer
+}
+
+/**
+ * So that it implements the io.ReadCloser interface
+ */
+func (m myReader) Close() error { return nil }
 
 /**
  * Populate the global list of servers, via the named file.
@@ -51,6 +65,72 @@ func read_servers(path string) {
  * Upload a file to to the public-root.
  */
 func UploadHandler(res http.ResponseWriter, req *http.Request) {
+
+	//
+	// We create a new buffer to hold the request-body.
+	//
+	buf, _ := ioutil.ReadAll(req.Body)
+
+	//
+	// Create a copy of the buffer, so that we can consume
+	// it initially to hash the data.
+	//
+	rdr1 := myReader{bytes.NewBuffer(buf)}
+
+	//
+	// Get the SHA1 hash of the uploaded data.
+	//
+	hasher := sha1.New()
+	b, _ := ioutil.ReadAll(rdr1)
+	hasher.Write([]byte(b))
+	hash := hasher.Sum(nil)
+
+	//
+	// Now we're going to attempt to re-POST the uploaded
+	// content to one of our blob-servers.
+	//
+	// We try each blob-server in turn, and if/when we receive
+	// a successfull result we'll return it to the caller.
+	//
+	for _, s := range SERVERS {
+
+		//
+		// Replace the request body with the (second) copy we made.
+		//
+		rdr2 := myReader{bytes.NewBuffer(buf)}
+		req.Body = rdr2
+
+		//
+		// Build up a request, which is a HTTP-POST
+		//
+		r, err := http.Post(
+			fmt.Sprintf("%s%s%x", s, "/blob/", hash),
+			"", req.Body)
+
+		//
+		// If there was no error we're good.
+		//
+		if err == nil {
+
+			//
+			// We read the reply we received from the
+			// blob-server and return it to the caller.
+			//
+			response, _ := ioutil.ReadAll(r.Body)
+
+			if response != nil {
+				fmt.Fprintf(res, string(response))
+				return
+			}
+		}
+	}
+
+	//
+	// If we reach here we've attempted our upload on every
+	// known blob-server and none accepted our upload.
+	//
+	// Let the caller know.
+	//
 	fmt.Fprintf(res, "Upload FAILED")
 	return
 
