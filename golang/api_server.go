@@ -13,10 +13,13 @@
 package main
 
 import (
+	"bufio"
+	"bytes"
 	"flag"
 	"fmt"
 	"github.com/gorilla/mux"
 	"net/http"
+	"os"
 	"sync"
 )
 
@@ -26,6 +29,23 @@ import (
  * It is populated by reading ~/.sos.conf and /etc/sos.conf
  */
 var SERVERS []string
+
+/**
+ * Populate the global list of servers, via the named file.
+ */
+func read_servers(path string) {
+	inFile, err := os.Open(path)
+	if err != nil {
+		return
+	}
+	defer inFile.Close()
+
+	scanner := bufio.NewScanner(inFile)
+	scanner.Split(bufio.ScanLines)
+	for scanner.Scan() {
+		SERVERS = append(SERVERS, scanner.Text())
+	}
+}
 
 /**
  * Upload a file to to the public-root.
@@ -57,11 +77,11 @@ func main() {
 	uport := flag.Int("upload-port", 9991, "The port to bind upon for uploading objects.")
 	flag.Parse()
 
-        //
-        // Pretend we have only a pair of servers
-        //
-        SERVERS = append( SERVERS, "http://127.0.0.1:4000" )
-        SERVERS = append( SERVERS, "http://127.0.0.1:4001" )
+	//
+	// Read the list of blob-servers we should route to.
+	//
+	read_servers("/etc/sos.conf")
+	read_servers(os.ExpandEnv("$HOME/.sos.conf"))
 
 	//
 	// Show a banner.
