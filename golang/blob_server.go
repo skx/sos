@@ -3,9 +3,6 @@
  *
  * Trivial rewrite of the blob-server in #golang.
  *
- * TODO:
- *   Output JSON on-upload.
- *
  */
 
 package main
@@ -19,11 +16,10 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
-	"strings"
 )
 
 //
-// The location our data is stored at
+// The location our data is stored beneath.
 //
 var ROOT = "./data"
 
@@ -63,7 +59,7 @@ func MissingHandler(res http.ResponseWriter, req *http.Request) {
 }
 
 /**
- * List the blob-IDs of all blobs we know about.
+ * List the IDs of all blobs we know about.
  */
 func ListHandler(res http.ResponseWriter, req *http.Request) {
 
@@ -98,14 +94,15 @@ func UploadHandler(res http.ResponseWriter, req *http.Request) {
 	fname := ROOT + "/" + id
 
 	/**
-         * Get the incoming body and write to the given
-         * file-name.
-	*/
+	 * Get the incoming body and write to the given
+	 * file-name.
+	 */
 	var outfile *os.File
 	if outfile, err = os.Create(fname); nil != err {
 		status = http.StatusInternalServerError
 		return
 	}
+	defer outfile.Close()
 
 	if _, err = io.Copy(outfile, req.Body); nil != err {
 		status = http.StatusInternalServerError
@@ -113,30 +110,36 @@ func UploadHandler(res http.ResponseWriter, req *http.Request) {
 	}
 
 	//
-	// Write out the redirection - using the host
-	// scheme, and the end-point of the new upload.
+	// Get the size of the file.
 	//
-	hostname := req.Host
-	scheme := "http"
-
-	if strings.HasPrefix(req.Proto, "HTTPS") {
-		scheme = "https"
+	file, err := os.Open(fname)
+	if err != nil {
+		status = http.StatusInternalServerError
+		return
 	}
-	if req.Header.Get("X-Forwarded-Proto") == "https" {
-		scheme = "https"
+	defer file.Close()
+	fi, err := file.Stat()
+	if err != nil {
+		status = http.StatusInternalServerError
+		return
 	}
 
 	//
-	// Output the get-link.
+	// Output the result - horrid.
 	//
-	// TODO: Write out JSON data about the upload.
+	//  { "id": "foo",
+	//   "size": 1234,
+	//   "status": "ok",
+	//  }
 	//
-	res.Write([]byte(scheme + "://" + hostname + "/blob/" + id + "\n"))
+	out := fmt.Sprintf("{\"id\":\"%s\",\"status\":\"OK\",\"size\":%d}", id, fi.Size())
+	fmt.Fprintf(res, string(out))
+
 }
 
-//
-// Entry-point.
-//
+/**
+ * Entry point to our code.
+ */
 func main() {
 
 	host := flag.String("host", "127.0.0.1", "The IP to listen upon")
