@@ -1,49 +1,43 @@
-Simple Object Storage
----------------------
+Simple Object Storage, in golang
+--------------------------------
 
 The Simple Object Storage (SOS) is a HTTP-based object-storage system
 which allows files to be uploaded, and later retrieved by ID.
 
 Files can be replicated across a number hosts to ensure redundancy,
-and despite the naive implementation it scales easily to thousands of files.
+and despite the naive implementation it does  scale millions of files.
+
+The code written in [golang](http://golang.com/), easing deployment.
+
+Building the code should be a simple as:
+
+     cd ./golang
+     make
 
 
-Dependencies
-------------
+Simple Design
+-------------
 
-The code is 100% pure-perl, and requires only a minimal set of dependencies, which are available to the Stable release of Debian GNU/Linux:
+The implementation of the object-store is built upon the primitive of a "blob server".  A blob server is a dumb service which provides three simple operations:
 
-    apt-get install libdancer-perl libjson-perl
+* Store a particular chunk of binary data with a specific name.
+* Given a name retrieve the chunk of binary data associated with it.
+* Return a list of all known names.
 
-For production use I'd recommend the use of plack:
+These primitives are sufficient to provide a robust replicating storage system, because it is possible to easily mirror their contents, providing we assume that the IDs only ever hold a particular set of data (i.e. data is immutable).
 
-    apt-get install libplack-perl twiggy
+To replicate the contents of `blob-server-a` to `blob-server-b` the algorithm is obvious:
 
-As a proof of concept there is a golang version of the blob-server, included beneath `golang/` this is not yet 100% functional, but will be shortly.  If you have performance concerns you might consider using it.
+* Get the list of known-names of the blobs stored on `blob-server-a`.
+* For each name, fetch the data associated with that name.
+    * Now store that data, with the same name, on `blob-server-b`.
+    * At this point we're done.
 
+In a real world situation things are complex, as there might be different storage-capacities available on the different nodes.  Similarly we can shortcut and store data only if not already present.  (In fact you could imagine us switching to using [redis](http://redis.io/), [memcached](https://memcached.org/), or even [postgresql](http://postgresql.org/) as our blob-storage engine!)
 
-Overview
---------
+When an object is uploaded to the object-store it is merely passed to a random blob-server.  From there it is replicated asynchronously, by the invokation of a specific sync-script:
 
-The implementation is split into three distinct parts:
-
-* A (public) API which you interactive with.
-    * Allowing you to upload/store files.
-    * Allowing you to download/retrieve files.
-
-* A blob-server.
-    * The blob-servers are the things that actually store the data.
-    * Multiple blob-servers can be executed on multiple hosts, and data will be replicated between them.
-
-* A replication utility.
-
-**NOTE**: In the past the public API-service was provided by one server, but in the wild it is expected you'd have security goals that would disallow that:
-
-* The expectation is that everybody can download all stored-objects.
-* But uploads should only be permitted from one or more hosts.
-    * Splitting the api-server into a pair of distinct upload/download services allows a firewall to be applied more useful.
-    * The only cost is the requirement to run two daemons instead of one.
-
+    ./bin/replicate -v
 
 
 Quick Start
@@ -51,38 +45,36 @@ Quick Start
 
 In an ideal deployment at least two servers would be used:
 
-* One server would run the upload & download service, allowing files to stored and retrieved.
+* One server would run the API-server, which allows uploads to be made, and later retrieved.
 * Each of the two servers would run a blob-service, allowing a single uploaded object to be replicated upon both hosts.
 
 We can replicate this upon a single host though, for the purposes of testing.  You'll just need to make sure you have four terminals open to run the appropriate daemons.
 
 First of all you'll want to launch a pair of blob-servers:
 
-    ./bin/blob-server --port 4040 ./data1
-    ./bin/blob-server --port 4041 ./dat2
+    ./golang/blob_server -store data1 -port 4001
+    ./golang/blob_server -store data2 -port 4002
 
-  Record their names in a configuration file, such that the upload/download daemons know where their storage is located at:
+Record the names of the server in a configuration file, such that the upload/download daemons know where their storage is located at:
 
     $ cat >> ~/.sos.conf<<EOF
-    http://localhost:4040
-    http://localhost:4041
+    http://localhost:4001
+    http://localhost:4002
     EOF
 
-Now you can start an upload-server.  This server is what your code will interact with to upload content, and it will talk to the blob-servers to actually store your uploads on-disk:
+Now you can start an API-server.  This server is what your code will interact with to upload content, and it will talk to the blob-servers to actually store your uploads on-disk:
 
-    ./bin/upload-server
-
-Finally you'll want to launch a download-server, which is what clients will connect to in order to retrieve previously-uploaded content:
-
-    ./bin/download-server
+    ./golang/api_server
+    Launching API-server
+    ..
 
 
-By default the following ports will be used:
+By default the following ports will be used by the `api_server`:
 
 |service          | port |
 |---------------- | ---- |
-| upload-server   | 9991 |
-| download-server | 9992 |
+| upload service   | 9991 |
+| download service | 9992 |
 
 To upload a file to your server, to test it out run:
 
@@ -109,29 +101,30 @@ The default is to replicate all files into two servers, if you were running thre
 Production Usage
 ----------------
 
-Launching the various services under `plackup` with the `Twiggy` driver will give better performance and more scalability, and can be done like so:
+* The API service must be visible to clients, to allow downloads to be made.
 
-**NOTE**: We're launching the upload server only listening upon the loopback adapter:
+* It is assumed you might wish to restrict uploads to particular clients, rather than allow the world to make uploads.  The simplest way of doing this is to use a local firewall.
 
-   $ plackup -Ilib/ -s Twiggy --workers=4 -0 127.0.0.1 -p 9991 -a bin/upload-server --access-log logs/uploads.log -E production
+* The blob-servers should be reachable by the hosts running the API-service, but they do not need to be publicly visible, these should be firewalled.
 
-The download-server is listening upon all interfaces, as it should be publicly accessible:
 
-   $ plackup -Ilib/  -s Twiggy --workers=4 -0 0.0.0.0 -p 9992 -a bin/download-server --access-log logs/downloads.log -E production
 
-Otherwise the usage is the same as previously, recording the server-names in the configuration file `/etc/sos.conf`, or `~/.sos.conf`, and launching the appropriate blob-servers:
+Future Changes?
+---------------
 
-    $ bin/blob-server --port=2001  ./data1
-    $ bin/blob-server --port=2002  ./data2
+There are two specific changes which would be useful to see in the future:
 
-Finally on the upload/download-server host(s) define the list of servers in /etc/sos.conf:
+* Marking particular blob-servers as preferred, or read-only.
+     * If you have 10 severs, 8 of which are full, then it becomes useful to know that explicitly, rather than learning at runtime when many operations have to be retried, repeated, or cancelled.
+* Caching the association between object-IDs and the blob-server(s) upon which it is stored.
+     * This would become more useful as the number of the blob-servers rises.
 
-    $ cat > /etc/sos.conf <<EOF
-    server1.storage.lan:2001
-    server2.storage.lan:2002
-    EOF
+It would be possible switch to using _chunked_ storage, for example breaking up each file that is uploaded into 128Mb sections and treating them as distinct.  The reason that is not done at the moment is because it relies upon state:
 
-**NOTE**: The blob-servers should be firewalled; they explicitly do not need to be publicly accessible.
+* The public server needs to be able to know that file "1234" is comprised of chunks "11111", "222222", "AAAAAA", "BBBBBB", & etc.
+* That data must be always kept up to date and accessible.
+
+At the moment the API-server is stateless.  You could even run 20 of them, behind a load-balancer, with no concerns about locking or sharing!  Adding state spoils that, and the complexity has not yet been judged worthwhile.
 
 
 Questions?
@@ -140,4 +133,4 @@ Questions?
 Questions/Changes are most welcome; just report an issue.
 
 Steve
--- 
+--
