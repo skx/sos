@@ -19,6 +19,7 @@ For production use I'd recommend the use of plack:
 
     apt-get install libplack-perl twiggy
 
+As a proof of concept there is a golang version of the blob-server, included beneath `golang/` this is not yet 100% functional, but will be shortly.  If you have performance concerns you might consider using it.
 
 
 Overview
