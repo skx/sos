@@ -24,6 +24,22 @@ import (
 var ROOT = "./data"
 
 /**
+* Called via GET /alive
+ */
+func HealthHandler(res http.ResponseWriter, req *http.Request) {
+	var (
+		status int
+		err    error
+	)
+	defer func() {
+		if nil != err {
+			http.Error(res, err.Error(), status)
+		}
+	}()
+	fmt.Fprintf(res, "alive")
+}
+
+/**
  * Called via GET /blob/XXXXXX
  */
 func GetHandler(res http.ResponseWriter, req *http.Request) {
@@ -159,6 +175,9 @@ func main() {
 
 	/* Create a router */
 	router := mux.NewRouter()
+
+	/* Health-check */
+	router.HandleFunc("/alive", HealthHandler).Methods("GET")
 
 	/* Get a previous upload */
 	router.HandleFunc("/blob/{id}", GetHandler).Methods("GET")

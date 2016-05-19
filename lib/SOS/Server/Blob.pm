@@ -59,6 +59,15 @@ use File::Basename qw! basename !;
 use Dancer;
 
 
+
+#
+#  Is this server still alive?
+#
+get '/alive' => sub {
+    return "alive";
+};
+
+
 #
 #  Store a new blob, with the given ID.
 #

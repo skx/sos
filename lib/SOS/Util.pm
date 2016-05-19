@@ -101,16 +101,17 @@ sub servers
 
     foreach my $s ( @{ $self->{ 'servers' } } )
     {
-        my $response = $ua->get( $s . '/' );
+        my $response = $ua->get( $s . '/alive' );
         my $code     = $response->code();
+        my $body     = $response->decoded_content();
 
-        if ( $code && ( $code =~ /^(404|200)$/ ) )
+        if ( $body && $body =~ /^alive$/i )
         {
             push( @result, $s );
         }
         else
         {
-            warn "Server offline $s";
+            warn "Server offline $s: $code";
         }
     }
 
