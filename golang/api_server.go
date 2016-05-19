@@ -126,7 +126,7 @@ func UploadHandler(res http.ResponseWriter, req *http.Request) {
 	}
 
 	//
-	// If we reach here we've attempted our upload on every
+	// If we reach here we've attempted our download on every
 	// known blob-server and none accepted our upload.
 	//
 	// Let the caller know.
