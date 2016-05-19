@@ -140,6 +140,50 @@ func UploadHandler(res http.ResponseWriter, req *http.Request) {
  * Download a file.
  */
 func DownloadHandler(res http.ResponseWriter, req *http.Request) {
+
+	//
+	// The ID of the file we're to retrieve.
+	//
+	vars := mux.Vars(req)
+	id := vars["id"]
+
+	//
+	// We try each blob-server in turn, and if/when we receive
+	// a successfull result we'll return it to the caller.
+	//
+	for _, s := range SERVERS {
+
+		//
+		// Build up a request, which is a HTTP-GET
+		//
+		response, err := http.Get(fmt.Sprintf("%s%s%s", s, "/blob/", id))
+		//
+		// If there was no error we're good.
+		//
+		if err != nil {
+			fmt.Printf("Error fetching %s from %s%s%s\n",
+				id, s, "/blob/", id)
+		} else {
+
+			//
+			// We read the reply we received from the
+			// blob-server and return it to the caller.
+			//
+			response, _ := ioutil.ReadAll(response.Body)
+
+			if response != nil {
+				fmt.Fprintf(res, string(response))
+				return
+			}
+		}
+	}
+
+	//
+	// If we reach here we've attempted our upload on every
+	// known blob-server and none accepted our upload.
+	//
+	// Let the caller know.
+	//
 	res.WriteHeader(http.StatusNotFound)
 	fmt.Fprintf(res, "Object not found.")
 }
