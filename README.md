@@ -5,7 +5,7 @@ The Simple Object Storage (SOS) is a HTTP-based object-storage system
 which allows files to be uploaded, and later retrieved by ID.
 
 Files can be replicated across a number hosts to ensure redundancy,
-and despite the naive implementation it does  scale millions of files.
+and despite the naive implementation it does scale to millions of files.
 
 The code written in [golang](http://golang.com/), easing deployment.
 
@@ -31,11 +31,14 @@ To replicate the contents of `blob-server-a` to `blob-server-b` the algorithm is
 * Get the list of known-names of the blobs stored on `blob-server-a`.
 * For each name, fetch the data associated with that name.
     * Now store that data, with the same name, on `blob-server-b`.
-    * At this point we're done.
 
-In a real world situation things are complex, as there might be different storage-capacities available on the different nodes.  Similarly we can shortcut and store data only if not already present.  (In fact you could imagine us switching to using [redis](http://redis.io/), [memcached](https://memcached.org/), or even [postgresql](http://postgresql.org/) as our blob-storage engine!)
+In real world situations the replication might become more complex over time, as different blob-servers might be constrained by differing amounts of disk-space, etc.  But the core-operation is both obvious and simple to implement.
 
-When an object is uploaded to the object-store it is merely passed to a random blob-server.  From there it is replicated asynchronously, by the invokation of a specific sync-script:
+(In the future you could imagine switching to from the HTTP-based blob-server to using something else: [redis](http://redis.io/), [memcached](https://memcached.org/), or [postgresql](http://postgresql.org/) would be obvious candidates!)
+
+Ultimately the blob-servers provide the storage for the object-store, and the upload/download service just needs to mediate between them.  There isn't fancy logic or state to maintain, beyond that local to each node, so it is possible to run multiple blob-servers and multiple API-servers if required.
+
+The important thing is to ensure that a replication-job is launched regularly, to ensure that blob-servers __are__ replicated:
 
     ./bin/replicate -v
 
