@@ -75,6 +75,7 @@ Steve Kemp <steve@steve.org.uk>
 use strict;
 use warnings;
 
+use Encode qw(encode);
 use Getopt::Long;
 use JSON;
 use LWP::UserAgent;
@@ -283,15 +284,16 @@ sub replicate_object
         if ( $res->is_success() )
         {
             #
-            #  We have the data now
+            #  We have the data now, ensure it is UTF-8.
             #
             my $data = $res->decoded_content();
+            my $body = encode('UTF-8', $data);
 
             #
             #  Now upload to new location
             #
             my $req = HTTP::Request->new( 'POST', $random . "/blob/$id" );
-            $req->content($data);
+            $req->content($body);
 
             my $res = $lwp->request($req);
             if ( $res->is_success() )
