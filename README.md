@@ -68,14 +68,16 @@ First of all you'll want to launch a pair of blob-servers:
     $ blob-server -store data1 -port 4001
     $ blob-server -store data2 -port 4002
 
-Record the names of the server in a configuration file, such that the upload/download daemons know where their storage is located at:
+> **NOTE**: The storage-paths (`./data1` and `./data2` in the example above) is where the uploaded-content will be stored.  These directories will be created if missing.
+
+Record the names of the blob-server in a configuration file, such that the `sos-server` knows where to find them:
 
     $ cat >> ~/.sos.conf<<EOF
     http://localhost:4001
     http://localhost:4002
     EOF
 
-Now you can start an API-server.  This server is what your code will interact with to upload content, and it will talk to the blob-servers to actually store your uploads on-disk:
+Now you can start an `sos-server` instance.  This server is what your code will interact with to upload content, and it will talk to the blob-servers to actually store your uploads on-disk:
 
     $ sos-server
     Launching API-server
@@ -89,16 +91,18 @@ By default the following ports will be used by the `sos-server` utility:
 | upload service   | 9991 |
 | download service | 9992 |
 
-To upload a file to your server, to test it out run:
+If you're running a pair of blob-servers, and the sos-server, you can now perform a test upload via `curl`:
 
     $ curl -X POST --data-binary @/etc/passwd  http://localhost:9991/upload
     {"id":"cd5bd649c4dc46b0bbdf8c94ee53c1198780e430","size":2306,"status":"OK"}
 
-To fetch this uploaded-file:
+If all goes well you'll receive a JSON-response as shown, and you can use the ID which is returned to retrieve your download:
 
     $ curl http://localhost:9992/fetch/cd5bd649c4dc46b0bbdf8c94ee53c1198780e430
     ..
     $
+
+> **NOTE**: The download service runs on a different port.  This is so that you can make policy decisions about uploads/downloads via your local firewall.
 
 At the point you run the upload the contents will only be present on one of the blob-servers, to ensure that it is mirrored you'll want to replicate the contents:
 
@@ -121,7 +125,7 @@ Production Usage
 * The blob-servers should be reachable by the hosts running the API-service, but they do not need to be publicly visible, these should be firewalled.
 
 * None of the servers need to be launched as root, because they don't bind to privileged ports, or require special access.
-    * **NOTE**: Once [issue #6](https://github.com/skx/sos/issues/6) is implemented root privileges will be required for a successful `chroot()`, however if that fails things are not terrible.
+    * **NOTE**: [issue #6](https://github.com/skx/sos/issues/6) improved the security of the `blob-server` by invoking `chroot()`.  However `chroot()` will fail if the server is not launched as root, which is harmless.
 
 
 
