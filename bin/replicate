@@ -1,4 +1,4 @@
-#!/usr/bin/perl -Ilib/ -I../lib/
+#!/usr/bin/perl
 
 =head1 NAME
 
@@ -10,23 +10,47 @@ replicate - The SOS replication utility
 
   replicate [options]
 
-
-  Path Options:
+  General Options:
 
    --min-copies  Specify the minimum copies of data required.
+   --verbose     Show more explicitly what is going on.
+
+  Help Options:
+
+   --help        Show brief help instructions.
+   --manual      Show the manual.
 
 =cut
 
 =head1 OVERVIEW
 
-* Reads servers from /etc/sso.conf or  ~/.sos.conf.
+This utility is designed to synchronize the contents of an arbitrary
+number of blob-servers.  It does this by contacting each known blob-server
+and retrieving a list of the objects stored upon it.
 
-* Replicates.
+For each object we then look to see how many times it is replicated,
+if a particular object is not stored sufficient times it is uploaded
+to other random blob-servers until the threshold is reached.
 
-* Lovely.
+The list of servers to contact is read from either:
+
+=over 8
+
+=item /etc/sos.conf
+
+=item ~/.sos.conf
+
+=back
 
 =cut
 
+=head1 NOTES
+
+It is not necessary for the blob-servers to communicate with each other,
+providing the host running the replicate-script can communicate with
+each of them.
+
+=cut
 
 =head1 LICENSE
 
@@ -59,7 +83,7 @@ use Pod::Usage;
 
 
 #
-#  Default options
+#  Default options: Don't be verbose and require two copies of each object.
 #
 my %CONFIG;
 $CONFIG{ 'copies' }  = 2;
@@ -80,6 +104,9 @@ exit
         "min-copies=i", \$CONFIG{ 'copies' },
     ) );
 
+
+pod2usage(1) if ( $CONFIG{ 'help' } );
+pod2usage( -verbose => 2 ) if ( $CONFIG{ 'manual' } );
 
 
 #
@@ -109,6 +136,7 @@ The list of servers should be placed in either:
 ~/.sos.conf
 /etc/sos.conf
 
+Either none or listed, or none are reachable.
 EOF
     exit(0);
 }
@@ -120,7 +148,7 @@ my %data = populateObjects();
 
 
 #
-# Ensure that the user isn't tryign to replicate more than the
+# Ensure that the user isn't trying to replicate more than the
 # number of servers.
 #
 if ( $CONFIG{ 'copies' } > scalar(@servers) )
@@ -141,8 +169,8 @@ EOF
 #
 # OK so we have a list of servers, and the objects each contains.
 #
-# We want to make sure that each object is stored in at least
-# two servers.
+# We want to make sure that each object is stored the given number
+# of times.
 #
 # So we want to build up a list of unique objects.
 #
@@ -338,7 +366,6 @@ and make a copy of those server-names which are alive and reachable.
 
 sub remove_dead_servers
 {
-
     #
     #  We'll test each server is alive before using it.
     #
@@ -356,6 +383,7 @@ sub remove_dead_servers
 
         if ( $body && $body =~ /^alive$/i )
         {
+            warn "Server online $s";
             push( @result, $s );
         }
         else
