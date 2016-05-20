@@ -1,7 +1,0 @@
-0.2 - 18th May 2016
-	* Replication now works as expected.
-	* Uploads/Downloads split into separate servers to allow isolation.
-
-0.1 - 16th May 2016
-	* Allows uploads/downloads via bin/api-server
-	* Blob-server is working.
