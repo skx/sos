@@ -211,28 +211,20 @@ func main() {
 	syscall.Chdir(*store)
 	syscall.Chroot(*store)
 
-	/* Create a router */
+	//
+	// Create a new router and our route-mappings.
+	//
 	router := mux.NewRouter()
-
-	/* Health-check */
 	router.HandleFunc("/alive", HealthHandler).Methods("GET")
-
-	/* Get a previous upload */
 	router.HandleFunc("/blob/{id}", GetHandler).Methods("GET")
-
-	/* Post a new one */
 	router.HandleFunc("/blob/{id}", UploadHandler).Methods("POST")
-
-	/* List blobs we know about */
 	router.HandleFunc("/blob", ListHandler).Methods("GET")
-
-	/* Error-Handler - Return a 404 on all requests */
 	router.PathPrefix("/").HandlerFunc(MissingHandler)
-
-	/* Load the routers beneath the server root */
 	http.Handle("/", router)
 
-	/* Launch the server */
+	//
+	// Launch the server
+	//
 	fmt.Printf("Launching the server on http://%s:%d\n", *host, *port)
 	err := http.ListenAndServe(fmt.Sprintf("%s:%d", *host, *port), nil)
 	if err != nil {
