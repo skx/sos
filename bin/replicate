@@ -129,6 +129,7 @@ remove_dead_servers();
 if ( !scalar(@servers) )
 {
     print <<EOF;
+
 In order to rebalance/replicate you must define a list of your object-servers.
 
 The list of servers should be placed in either:
@@ -136,7 +137,8 @@ The list of servers should be placed in either:
 ~/.sos.conf
 /etc/sos.conf
 
-Either none or listed, or none are reachable.
+Either none are listed, or none are reachable.
+
 EOF
     exit(0);
 }
