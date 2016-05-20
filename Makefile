@@ -1,4 +1,4 @@
 
 all:
-	cd api-server && make
+	cd sos-server && make
 	cd blob-server && make
