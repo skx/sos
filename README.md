@@ -7,20 +7,22 @@ which allows files to be uploaded, and later retrieved by ID.
 Files can be replicated across a number hosts to ensure redundancy,
 and despite the naive implementation it does scale to millions of files.
 
-The code written in [golang](http://golang.com/), easing deployment.
+The code written in [golang](http://golang.com/), which should ease deployment.
 
-Building the code should pretty ideomatic for a golang user:
+Building the code should pretty idiomatic for a golang user:
 
-     # Download the code:
+     # Download the code to $GOPATH/src
      go get -d github.com/skx/sos/...
 
-     # Build and install the two binaries:
+     # Build and install the two binaries to $GOPATH/bin
      go install github.com/skx/sos/...
 
 If you prefer to build manually:
 
-     git clone https://github.com/skx/sos.git
-     make
+     $ git clone https://github.com/skx/sos.git
+     $ cd sos
+     $ make
+
 
 
 Simple Design
@@ -63,8 +65,8 @@ We can replicate this upon a single host though, for the purposes of testing.  Y
 
 First of all you'll want to launch a pair of blob-servers:
 
-    ./golang/blob_server -store data1 -port 4001
-    ./golang/blob_server -store data2 -port 4002
+    $ blob-server -store data1 -port 4001
+    $ blob-server -store data2 -port 4002
 
 Record the names of the server in a configuration file, such that the upload/download daemons know where their storage is located at:
 
@@ -75,12 +77,12 @@ Record the names of the server in a configuration file, such that the upload/dow
 
 Now you can start an API-server.  This server is what your code will interact with to upload content, and it will talk to the blob-servers to actually store your uploads on-disk:
 
-    ./golang/api_server
+    $ sos-server
     Launching API-server
     ..
 
 
-By default the following ports will be used by the `api_server`:
+By default the following ports will be used by the `sos-server` utility:
 
 |service          | port |
 |---------------- | ---- |
