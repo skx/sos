@@ -16,12 +16,9 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"regexp"
+	"syscall"
 )
-
-//
-// The location our data is stored beneath.
-//
-var ROOT = "./data"
 
 /**
 * Called via GET /alive
@@ -53,17 +50,31 @@ func GetHandler(res http.ResponseWriter, req *http.Request) {
 		}
 	}()
 
+	//
+	// Get the ID which is requested.
+	//
 	vars := mux.Vars(req)
 	id := vars["id"]
 
-	fname := ROOT + "/" + id
+	//
+	// We're in a chroot() so we shouldn't need to worry
+	// about relative paths.  That said the chroot() call
+	// will have failed if we were not launched by root, so
+	// we need to make sure we avoid directory-traversal attacks.
+	//
+	r, _ := regexp.Compile("^([a-z0-9]+)$")
+	if !r.MatchString(id) {
+		status = http.StatusInternalServerError
+		fmt.Fprintf(res, "Alphanumeric IDs only.")
+		return
+	}
 
-	if _, err := os.Stat(fname); os.IsNotExist(err) {
+	if _, err := os.Stat(id); os.IsNotExist(err) {
 		http.NotFound(res, req)
 		return
 	}
 
-	http.ServeFile(res, req, fname)
+	http.ServeFile(res, req, id)
 }
 
 /**
@@ -81,7 +92,7 @@ func ListHandler(res http.ResponseWriter, req *http.Request) {
 
 	var list []string
 
-	files, _ := ioutil.ReadDir(ROOT)
+	files, _ := ioutil.ReadDir(".")
 
 	//
 	// If the list is non-empty then build up an array
@@ -113,16 +124,33 @@ func UploadHandler(res http.ResponseWriter, req *http.Request) {
 		}
 	}()
 
+	//
+	// Get the name of the blob to upload.
+	//
+	// We've previously chdir() and chroot() to the upload
+	// directory, so we don't need to worry about any path
+	// issues - providing the user isn't trying a traversal
+	// attack.
+	//
 	vars := mux.Vars(req)
 	id := vars["id"]
-	fname := ROOT + "/" + id
 
-	/**
-	 * Get the incoming body and write to the given
-	 * file-name.
-	 */
+	//
+	// Ensure the ID is entirely alphanumeric, to prevent
+	// traversal attacks.
+	//
+	r, _ := regexp.Compile("^([a-z0-9]+)$")
+	if !r.MatchString(id) {
+		fmt.Fprintf(res, "Alphanumeric IDs only.")
+		status = http.StatusInternalServerError
+		return
+	}
+
+	//
+	// Get the incoming body and write to the given file-name.
+	//
 	var outfile *os.File
-	if outfile, err = os.Create(fname); nil != err {
+	if outfile, err = os.Create(id); nil != err {
 		status = http.StatusInternalServerError
 		return
 	}
@@ -136,7 +164,7 @@ func UploadHandler(res http.ResponseWriter, req *http.Request) {
 	//
 	// Get the size of the file.
 	//
-	file, err := os.Open(fname)
+	file, err := os.Open(id)
 	if err != nil {
 		status = http.StatusInternalServerError
 		return
@@ -171,7 +199,17 @@ func main() {
 	store := flag.String("store", "data", "The location to write the data  to")
 
 	flag.Parse()
-	ROOT = *store
+
+	//
+	// If the data-directory does not exist create it.
+	//
+	os.MkdirAll(*store, 0755)
+
+	//
+	// Now try to secure ourselves
+	//
+	syscall.Chdir(*store)
+	syscall.Chroot(*store)
 
 	/* Create a router */
 	router := mux.NewRouter()
