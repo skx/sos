@@ -9,9 +9,17 @@ and despite the naive implementation it does scale to millions of files.
 
 The code written in [golang](http://golang.com/), easing deployment.
 
-Building the code should be a simple as:
+Building the code should pretty ideomatic for a golang user:
 
-     cd ./golang
+     # Download the code:
+     go get -d github.com/skx/sos/...
+
+     # Build and install the two binaries:
+     go install github.com/skx/sos/...
+
+If you prefer to build manually:
+
+     git clone https://github.com/skx/sos.git
      make
 
 
