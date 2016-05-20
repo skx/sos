@@ -22,6 +22,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 )
@@ -147,6 +148,12 @@ func DownloadHandler(res http.ResponseWriter, req *http.Request) {
 	//
 	vars := mux.Vars(req)
 	id := vars["id"]
+
+	//
+	// Strip any extension which might be present on the ID.
+	//
+	extension := filepath.Ext(id)
+	id = id[0 : len(id)-len(extension)]
 
 	//
 	// We try each blob-server in turn, and if/when we receive
