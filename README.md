@@ -70,28 +70,23 @@ First of all you'll want to launch a pair of blob-servers:
 
 > **NOTE**: The storage-paths (`./data1` and `./data2` in the example above) is where the uploaded-content will be stored.  These directories will be created if missing.
 
-Record the names of the blob-server in a configuration file, such that the `sos-server` knows where to find them:
+In production usage you'd generally record the names of the blob-servers in a configuration file, either `/etc/sos.conf`, or `~/.sos.conf`, however they may also be specified upon the command line.
 
-    $ cat >> ~/.sos.conf<<EOF
-    http://localhost:4001
-    http://localhost:4002
-    EOF
+We start the `sos-server` ensuring that it knows about the blob-servers to store content in:
 
-Now you can start an `sos-server` instance.  This server is what your code will interact with to upload content, and it will talk to the blob-servers to actually store your uploads on-disk:
-
-    $ sos-server
+    $ sos-server -blob-server http://localhost:4001,http://localhost:4002
     Launching API-server
     ..
 
 
-By default the following ports will be used by the `sos-server` utility:
+Now you, or your code, can connect to the server and start uploading/downloading objects.  By default the following ports will be used by the `sos-server`:
 
 |service          | port |
 |---------------- | ---- |
 | upload service   | 9991 |
 | download service | 9992 |
 
-If you're running a pair of blob-servers, and the sos-server, you can now perform a test upload via `curl`:
+Providing you've started all three daemons you can now perform a test upload with `curl`:
 
     $ curl -X POST --data-binary @/etc/passwd  http://localhost:9991/upload
     {"id":"cd5bd649c4dc46b0bbdf8c94ee53c1198780e430","size":2306,"status":"OK"}
@@ -104,7 +99,7 @@ If all goes well you'll receive a JSON-response as shown, and you can use the ID
 
 > **NOTE**: The download service runs on a different port.  This is so that you can make policy decisions about uploads/downloads via your local firewall.
 
-At the point you run the upload the contents will only be present on one of the blob-servers, to ensure that it is mirrored you'll want to replicate the contents:
+At the point you run the upload the contents will only be present on one of the blob-servers, chosen at random, to ensure that it is mirrored you'll want to replicate the contents:
 
     $ ./bin/replicate --verbose
 
