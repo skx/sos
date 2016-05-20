@@ -22,6 +22,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"strings"
 	"sync"
 )
 
@@ -197,6 +198,7 @@ func main() {
 	// Parse our command-line arguments.
 	//
 	host := flag.String("host", "0.0.0.0", "The IP to listen upon.")
+	blob := flag.String("blob-server", "", "Comma-separated list of blob-servers to contact.")
 	dport := flag.Int("download-port", 9992, "The port to bind upon for downloading objects.")
 	uport := flag.Int("upload-port", 9991, "The port to bind upon for uploading objects.")
 	flag.Parse()
@@ -208,11 +210,30 @@ func main() {
 	read_servers(os.ExpandEnv("$HOME/.sos.conf"))
 
 	//
+	// If we received blob-servers on the command-line use them too.
+	//
+	if blob != nil {
+		servers := strings.Split(*blob, ",")
+		for _, entry := range servers {
+			SERVERS = append(SERVERS, entry)
+		}
+	}
+
+	//
 	// Show a banner.
 	//
 	fmt.Printf("Launching API-server\n")
 	fmt.Printf("\nUpload service\nhttp://127.0.0.1:%d/upload\n", *uport)
 	fmt.Printf("\nDownload service\nhttp://127.0.0.1:%d/fetch/:id\n", *dport)
+
+	//
+	// Show the blob-servers
+	//
+	fmt.Printf("\nBlob-servers\n")
+	for _, entry := range SERVERS {
+		fmt.Printf("\t%s\n", entry)
+	}
+	fmt.Printf("\n")
 
 	//
 	// Create a route for uploading.
