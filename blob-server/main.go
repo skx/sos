@@ -71,11 +71,28 @@ func GetHandler(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	//
-	// Perform the retrival via our interface
-	//
-	data := STORAGE.Get(id)
+        //
+        // If the request method was HEAD we don't need to
+        // lookup & retur n the data, just see if it exists.
+        //
+        //  We'll terminate early and just return the status-code
+        // 200 vs. 404.
+        //
+	if req.Method == "HEAD" {
+		res.Header().Set("Connection", "close")
 
+		if STORAGE.Exists(id) {
+		} else {
+			res.WriteHeader(http.StatusNotFound)
+		}
+		return
+	}
+
+        //
+        // If we reached this point then the request was a GET
+        // so we lookup the data, returning it if present.
+        //
+	data := STORAGE.Get(id)
 	if data == nil {
 		http.NotFound(res, req)
 	} else {
@@ -208,6 +225,7 @@ func main() {
 	router := mux.NewRouter()
 	router.HandleFunc("/alive", HealthHandler).Methods("GET")
 	router.HandleFunc("/blob/{id}", GetHandler).Methods("GET")
+	router.HandleFunc("/blob/{id}", GetHandler).Methods("HEAD")
 	router.HandleFunc("/blob/{id}", UploadHandler).Methods("POST")
 	router.HandleFunc("/blob", ListHandler).Methods("GET")
 	router.PathPrefix("/").HandlerFunc(MissingHandler)
