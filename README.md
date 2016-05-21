@@ -4,10 +4,10 @@ Simple Object Storage, in golang
 The Simple Object Storage (SOS) is a HTTP-based object-storage system
 which allows files to be uploaded, and later retrieved by ID.
 
-Files can be replicated across a number hosts to ensure redundancy,
+Files can be replicated across a number of hosts to ensure redundancy,
 and despite the naive implementation it does scale to millions of files.
 
-The code written in [golang](http://golang.com/), which should ease deployment.
+The code is written in [golang](http://golang.com/), which should ease deployment.
 
 Building the code should pretty idiomatic for a golang user:
 
@@ -130,11 +130,11 @@ Future Changes?
 There are two specific changes which would be useful to see in the future:
 
 * Marking particular blob-servers as preferred, or read-only.
-     * If you have 10 severs, 8 of which are full, then it becomes useful to know that explicitly, rather than learning at runtime when many operations have to be retried, repeated, or canceled.
+     * If you have 10 servers, 8 of which are full, then it becomes useful to know that explicitly, rather than learning at runtime when many operations have to be retried, repeated, or canceled.
 * Caching the association between object-IDs and the blob-server(s) upon which it is stored.
      * This would become more useful as the number of the blob-servers rises.
 
-It would be possible switch to using _chunked_ storage, for example breaking up each file that is uploaded into 128Mb sections and treating them as distinct.  The reason that is not done at the moment is because it relies upon state:
+It would be possible to switch to using _chunked_ storage, for example breaking up each file that is uploaded into 128Mb sections and treating them as distinct.  The reason that is not done at the moment is because it relies upon state:
 
 * The public server needs to be able to know that the file with ID "NNNNABCDEF1234" is comprised of chunks "11111", "222222", "AAAAAA", "BBBBBB", & etc.
 * That data must be always kept up to date and accessible.
