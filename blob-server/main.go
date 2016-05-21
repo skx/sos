@@ -1,7 +1,7 @@
 /*
  * blob_server.go
  *
- * Trivial rewrite of the blob-server in #golang.
+ * Trivial blob-server in #golang.
  *
  */
 
@@ -12,13 +12,15 @@ import (
 	"flag"
 	"fmt"
 	"github.com/gorilla/mux"
-	"io"
 	"io/ioutil"
 	"net/http"
-	"os"
 	"regexp"
-	"syscall"
 )
+
+//
+//  The handle to our storage method
+//
+var STORAGE StorageHandler
 
 /**
 * Called via GET /alive
@@ -69,12 +71,16 @@ func GetHandler(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if _, err := os.Stat(id); os.IsNotExist(err) {
-		http.NotFound(res, req)
-		return
-	}
+	//
+	// Perform the retrival via our interface
+	//
+	data := STORAGE.Get(id)
 
-	http.ServeFile(res, req, id)
+	if data == nil {
+		http.NotFound(res, req)
+	} else {
+		fmt.Fprintf(res, string(*data))
+	}
 }
 
 /**
@@ -92,17 +98,13 @@ func ListHandler(res http.ResponseWriter, req *http.Request) {
 
 	var list []string
 
-	files, _ := ioutil.ReadDir(".")
+	list = STORAGE.Existing()
 
 	//
 	// If the list is non-empty then build up an array
 	// of the names, then send as JSON.
 	//
-	if len(files) > 0 {
-		for _, f := range files {
-			list = append(list, f.Name())
-		}
-
+	if len(list) > 0 {
 		mapB, _ := json.Marshal(list)
 		fmt.Fprintf(res, string(mapB))
 	} else {
@@ -147,31 +149,19 @@ func UploadHandler(res http.ResponseWriter, req *http.Request) {
 	}
 
 	//
-	// Get the incoming body and write to the given file-name.
+	// Read the body of the request.
 	//
-	var outfile *os.File
-	if outfile, err = os.Create(id); nil != err {
-		status = http.StatusInternalServerError
-		return
-	}
-	defer outfile.Close()
-
-	if _, err = io.Copy(outfile, req.Body); nil != err {
+	content, err := ioutil.ReadAll(req.Body)
+	if err != nil {
 		status = http.StatusInternalServerError
 		return
 	}
 
 	//
-	// Get the size of the file.
+	// Store the body, via our interface.
 	//
-	file, err := os.Open(id)
-	if err != nil {
-		status = http.StatusInternalServerError
-		return
-	}
-	defer file.Close()
-	fi, err := file.Stat()
-	if err != nil {
+	result := STORAGE.Store(id, content)
+	if result == false {
 		status = http.StatusInternalServerError
 		return
 	}
@@ -184,7 +174,7 @@ func UploadHandler(res http.ResponseWriter, req *http.Request) {
 	//   "status": "ok",
 	//  }
 	//
-	out := fmt.Sprintf("{\"id\":\"%s\",\"status\":\"OK\",\"size\":%d}", id, fi.Size())
+	out := fmt.Sprintf("{\"id\":\"%s\",\"status\":\"OK\",\"size\":%d}", id, len(content))
 	fmt.Fprintf(res, string(out))
 
 }
@@ -194,22 +184,23 @@ func UploadHandler(res http.ResponseWriter, req *http.Request) {
  */
 func main() {
 
+	//
+	// Parse the command-line arguments.
+	//
 	host := flag.String("host", "127.0.0.1", "The IP to listen upon")
 	port := flag.Int("port", 3001, "The port to bind upon")
 	store := flag.String("store", "data", "The location to write the data  to")
-
 	flag.Parse()
 
 	//
-	// If the data-directory does not exist create it.
+	// Create a storage system.
 	//
-	os.MkdirAll(*store, 0755)
-
+	// At the moment we only have a filesystem-based storage
+	// class.  In the future it is possible we'd have more, and we'd
+	// choose between them via a command-line flag.
 	//
-	// Now try to secure ourselves
-	//
-	syscall.Chdir(*store)
-	syscall.Chroot(*store)
+	STORAGE = new(FilesystemStorage)
+	STORAGE.Setup(*store)
 
 	//
 	// Create a new router and our route-mappings.
