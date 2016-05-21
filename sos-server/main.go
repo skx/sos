@@ -13,7 +13,6 @@
 package main
 
 import (
-	"bufio"
 	"bytes"
 	"crypto/sha1"
 	"flag"
@@ -21,18 +20,10 @@ import (
 	"github.com/gorilla/mux"
 	"io/ioutil"
 	"net/http"
-	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 )
-
-/**
- * This is the list of servers we know about.
- *
- * It is populated by reading ~/.sos.conf and /etc/sos.conf
- */
-var SERVERS []string
 
 /**
  * This is a helper for allowing us to consume a HTTP-body more than once.
@@ -45,23 +36,6 @@ type myReader struct {
  * So that it implements the io.ReadCloser interface
  */
 func (m myReader) Close() error { return nil }
-
-/**
- * Populate the global list of servers, via the named file.
- */
-func read_servers(path string) {
-	inFile, err := os.Open(path)
-	if err != nil {
-		return
-	}
-	defer inFile.Close()
-
-	scanner := bufio.NewScanner(inFile)
-	scanner.Split(bufio.ScanLines)
-	for scanner.Scan() {
-		SERVERS = append(SERVERS, scanner.Text())
-	}
-}
 
 /**
  * Upload a file to to the public-root.
@@ -94,7 +68,7 @@ func UploadHandler(res http.ResponseWriter, req *http.Request) {
 	// We try each blob-server in turn, and if/when we receive
 	// a successfull result we'll return it to the caller.
 	//
-	for _, s := range SERVERS {
+	for _, s := range Servers() {
 
 		//
 		// Replace the request body with the (second) copy we made.
@@ -106,7 +80,7 @@ func UploadHandler(res http.ResponseWriter, req *http.Request) {
 		// Build up a request, which is a HTTP-POST
 		//
 		r, err := http.Post(
-			fmt.Sprintf("%s%s%x", s, "/blob/", hash),
+			fmt.Sprintf("%s%s%x", s.location, "/blob/", hash),
 			"", req.Body)
 
 		//
@@ -159,18 +133,18 @@ func DownloadHandler(res http.ResponseWriter, req *http.Request) {
 	// We try each blob-server in turn, and if/when we receive
 	// a successfull result we'll return it to the caller.
 	//
-	for _, s := range SERVERS {
+	for _, s := range Servers() {
 
 		//
 		// Build up a request, which is a HTTP-GET
 		//
-		response, err := http.Get(fmt.Sprintf("%s%s%s", s, "/blob/", id))
+		response, err := http.Get(fmt.Sprintf("%s%s%s", s.location, "/blob/", id))
 		//
 		// If there was no error we're good.
 		//
 		if err != nil {
 			fmt.Printf("Error fetching %s from %s%s%s\n",
-				id, s, "/blob/", id)
+				id, s.location, "/blob/", id)
 		} else {
 
 			//
@@ -211,10 +185,15 @@ func main() {
 	flag.Parse()
 
 	//
-	// Read the list of blob-servers we should route to.
+	// Show a banner.
 	//
-	read_servers("/etc/sos.conf")
-	read_servers(os.ExpandEnv("$HOME/.sos.conf"))
+	fmt.Printf("Launching API-server\n")
+	fmt.Printf("\nUpload service\nhttp://127.0.0.1:%d/upload\n", *uport)
+	fmt.Printf("\nDownload service\nhttp://127.0.0.1:%d/fetch/:id\n", *dport)
+	//
+	//  Initialize the servers.
+	//
+	InitServers()
 
 	//
 	// If we received blob-servers on the command-line use them too.
@@ -222,23 +201,16 @@ func main() {
 	if blob != nil {
 		servers := strings.Split(*blob, ",")
 		for _, entry := range servers {
-			SERVERS = append(SERVERS, entry)
+			AddServer(entry)
 		}
 	}
 
 	//
-	// Show a banner.
+	// Show the blob-servers, and their weights
 	//
-	fmt.Printf("Launching API-server\n")
-	fmt.Printf("\nUpload service\nhttp://127.0.0.1:%d/upload\n", *uport)
-	fmt.Printf("\nDownload service\nhttp://127.0.0.1:%d/fetch/:id\n", *dport)
-
-	//
-	// Show the blob-servers
-	//
-	fmt.Printf("\nBlob-servers\n")
-	for _, entry := range SERVERS {
-		fmt.Printf("\t%s\n", entry)
+	fmt.Printf("\nBlob-servers, by weight:\n")
+	for _, entry := range Servers() {
+		fmt.Printf("\t% 4d - %s\n", entry.weight, entry.location)
 	}
 	fmt.Printf("\n")
 
