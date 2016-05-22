@@ -73,7 +73,7 @@ func GetHandler(res http.ResponseWriter, req *http.Request) {
 
         //
         // If the request method was HEAD we don't need to
-        // lookup & retur n the data, just see if it exists.
+        // lookup & return n the data, just see if it exists.
         //
         //  We'll terminate early and just return the status-code
         // 200 vs. 404.

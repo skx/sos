@@ -66,7 +66,7 @@ func UploadHandler(res http.ResponseWriter, req *http.Request) {
 	// content to one of our blob-servers.
 	//
 	// We try each blob-server in turn, and if/when we receive
-	// a successfull result we'll return it to the caller.
+	// a successful result we'll return it to the caller.
 	//
 	for _, s := range Servers() {
 
@@ -131,7 +131,7 @@ func DownloadHandler(res http.ResponseWriter, req *http.Request) {
 
 	//
 	// We try each blob-server in turn, and if/when we receive
-	// a successfull result we'll return it to the caller.
+	// a successfully result we'll return it to the caller.
 	//
 	for _, s := range Servers() {
 
