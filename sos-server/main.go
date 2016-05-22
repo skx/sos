@@ -188,8 +188,8 @@ func main() {
 	// Show a banner.
 	//
 	fmt.Printf("Launching API-server\n")
-	fmt.Printf("\nUpload service\nhttp://127.0.0.1:%d/upload\n", *uport)
-	fmt.Printf("\nDownload service\nhttp://127.0.0.1:%d/fetch/:id\n", *dport)
+	fmt.Printf("\nUpload service\nhttp://%s:%d/upload\n", *host, *uport)
+	fmt.Printf("\nDownload service\nhttp://%s:%d/fetch/:id\n", *host, *dport)
 	//
 	//  Initialize the servers.
 	//
