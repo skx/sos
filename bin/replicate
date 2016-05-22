@@ -434,7 +434,7 @@ pod2usage( -verbose => 2 ) if ( $CONFIG{ 'manual' } );
 
 
 #
-#  If we've been given a --daemon flag then we'll reeat
+#  If we've been given a --daemon flag then we'll repeat
 # the sync, otherwise we'll just run it once.
 #
 do
@@ -459,7 +459,7 @@ do
     if ( !scalar(@servers) )
     {
         print <<EOF;
-In order to rebalance/replicate you must define a list of your object-servers.
+In order to re-balance/replicate you must define a list of your object-servers.
 The list of servers should be placed in either
 
 ~/.sos.conf
