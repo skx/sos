@@ -12,6 +12,7 @@ replicate - The SOS replication utility
 
   General Options:
 
+   --deamon      Specify that we should run constantly.
    --min-copies  Specify the minimum copies of data required.
    --verbose     Show more explicitly what is going on.
 
@@ -92,130 +93,104 @@ $CONFIG{ 'verbose' } = 0;
 
 
 #
-#  Parse options from the command-line.
-#
-exit
-  if (
-    !GetOptions(
-
-        # Help options
-        "help",         \$CONFIG{ 'help' },
-        "manual",       \$CONFIG{ 'manual' },
-        "verbose",      \$CONFIG{ 'verbose' },
-        "min-copies=i", \$CONFIG{ 'copies' },
-    ) );
-
-
-pod2usage(1) if ( $CONFIG{ 'help' } );
-pod2usage( -verbose => 2 ) if ( $CONFIG{ 'manual' } );
-
-#
-# Populate the servers we know about
+# The list of blob-servers we know about.
 #
 my @servers;
-read_file("/etc/sos.conf");
-read_file( $ENV{ 'HOME' } . "/.sos.conf" );
 
 
 #
-#  Now remove any servers which are offline.
+#  The list of files on each server.
 #
-remove_dead_servers();
+my %data;
 
 
-#
-# If we have no servers then we must abort.
-#
-if ( !scalar(@servers) )
+
+=begin doc
+
+Download the list of all files, and start the replication
+process.
+
+=end doc
+
+=cut
+
+sub replicate
 {
-    print <<EOF;
-
-In order to rebalance/replicate you must define a list of your object-servers.
-
-The list of servers should be placed in either:
-
-~/.sos.conf
-/etc/sos.conf
-
-Either none are listed, or none are reachable.
-
-EOF
-    exit(0);
-}
-
-#
-# Get the list of files on each server.
-#
-my %data = populateObjects();
+    #
+    # Get the list of files on each server.
+    #
+    %data = populateObjects();
 
 
-#
-# Ensure that the user isn't trying to replicate more than the
-# number of servers.
-#
-if ( $CONFIG{ 'copies' } > scalar(@servers) )
-{
-    my $avail = scalar(@servers);
+    #
+    # Ensure that the user isn't trying to replicate more than the
+    # number of servers.
+    #
+    if ( $CONFIG{ 'copies' } > scalar(@servers) )
+    {
+        my $avail = scalar(@servers);
 
-    print <<EOF;
+        print <<EOF;
 You've asked for an impossible number of replicated-copies:
 
 * You have $avail blob-servers available.
 * You've asked for $CONFIG{'copies'}.
 EOF
-    exit(1);
-}
-
-
-#
-#
-# OK so we have a list of servers, and the objects each contains.
-#
-# We want to make sure that each object is stored the given number
-# of times.
-#
-# So we want to build up a list of unique objects.
-#
-my %objects;
-
-foreach my $server ( sort keys %data )
-{
-    $CONFIG{ 'verbose' } && print "Objects stored on blob-server $server\n";
-    foreach my $id ( keys %{ $data{ $server } } )
-    {
-        $CONFIG{ 'verbose' } && print "\t$id\n";
-        $objects{ $id } += 1;
+        return;
     }
-    $CONFIG{ 'verbose' } && print "\n";
-}
 
 
-#
-#  Unique objects.
-#
-$CONFIG{ 'verbose' } && print "\nBeginning replication scan.\n";
+    #
+    #
+    # OK so we have a list of servers, and the objects each contains.
+    #
+    # We want to make sure that each object is stored the given number
+    # of times.
+    #
+    # So we want to build up a list of unique objects.
+    #
+    my %objects;
 
-foreach my $object_id ( keys %objects )
-{
-    #
-    # The number of copies of this file which exists.
-    #
-    my $replicas = $objects{ $object_id };
-
-    #
-    #  If it is too-few then we need to replicate it.
-    #
-    if ( $replicas < $CONFIG{ 'copies' } )
+    foreach my $server ( sort keys %data )
     {
-        $CONFIG{ 'verbose' } &&
-          print "$replicas copies of $object_id required: $CONFIG{'copies'}\n";
-
-        replicate_object( $object_id, ( $CONFIG{ 'copies' } - $replicas ) );
+        $CONFIG{ 'verbose' } && print "Objects stored on blob-server $server\n";
+        foreach my $id ( keys %{ $data{ $server } } )
+        {
+            $CONFIG{ 'verbose' } && print "\t$id\n";
+            $objects{ $id } += 1;
+        }
+        $CONFIG{ 'verbose' } && print "\n";
     }
+
+
+    #
+    #  Unique objects.
+    #
+    $CONFIG{ 'verbose' } && print "\nBeginning replication scan.\n";
+
+    foreach my $object_id ( keys %objects )
+    {
+        #
+        # The number of copies of this file which exists.
+        #
+        my $replicas = $objects{ $object_id };
+
+        #
+        #  If it is too-few then we need to replicate it.
+        #
+        if ( $replicas < $CONFIG{ 'copies' } )
+        {
+            $CONFIG{ 'verbose' } &&
+              print
+              "$replicas copies of $object_id required: $CONFIG{'copies'}\n";
+
+            replicate_object( $object_id, ( $CONFIG{ 'copies' } - $replicas ) );
+        }
+    }
+    $CONFIG{ 'verbose' } && print "\nReplication scan complete.\n";
+
 }
-$CONFIG{ 'verbose' } && print "\nReplication scan complete.\n";
-#
-exit(0);
+
 
 
 
@@ -252,11 +227,12 @@ sub replicate_object
     {
         if ( $data{ $server }{ $id } )
         {
-            print "\tFound on $server\n";
+            $CONFIG{ 'verbose' } && print "\tFound on $server\n";
         }
         else
         {
-            print "\t$server is a possible target for replication\n";
+            $CONFIG{ 'verbose' } &&
+              print "\t$server is a possible target for replication\n";
             push( @missing, $server );
         }
     }
@@ -297,7 +273,7 @@ sub replicate_object
             my $res = $lwp->request($req);
             if ( $res->is_success() )
             {
-                print "\tReplication successful\n";
+                $CONFIG{ 'verbose' } && print "\tReplication successful\n";
             }
             else
             {
@@ -380,6 +356,8 @@ sub remove_dead_servers
 
     foreach my $s (@servers)
     {
+        next unless ( $s && ( $s =~ /http/i ) );
+
         my $response = $ua->get( $s . '/alive' );
         my $code     = $response->code();
         my $body     = $response->decoded_content();
@@ -431,3 +409,78 @@ sub read_file
     close($handle);
 
 }
+
+
+
+
+#
+#  Parse options from the command-line.
+#
+exit
+  if (
+    !GetOptions(
+
+        # Help options
+        "help",         \$CONFIG{ 'help' },
+        "manual",       \$CONFIG{ 'manual' },
+        "verbose",      \$CONFIG{ 'verbose' },
+        "min-copies=i", \$CONFIG{ 'copies' },
+        "daemon=i",     \$CONFIG{ 'daemon' },
+    ) );
+
+
+pod2usage(1) if ( $CONFIG{ 'help' } );
+pod2usage( -verbose => 2 ) if ( $CONFIG{ 'manual' } );
+
+
+#
+#  If we've been given a --daemon flag then we'll reeat
+# the sync, otherwise we'll just run it once.
+#
+do
+{
+
+    @servers = undef;
+    %data = ( 0 => 0 );
+    delete( $data{ 0 } );
+
+    #  Populate servers we know about.
+    read_file("/etc/sos.conf");
+    read_file( $ENV{ 'HOME' } . "/.sos.conf" );
+
+
+    #  Now remove any servers which are offline.
+    remove_dead_servers();
+
+
+    #
+    # If we have no servers then we must abort.
+    #
+    if ( !scalar(@servers) )
+    {
+        print <<EOF;
+In order to rebalance/replicate you must define a list of your object-servers.
+The list of servers should be placed in either
+
+~/.sos.conf
+/etc/sos.conf
+
+Either none are listed, or none are reachable.
+
+EOF
+        exit(0);
+    }
+
+
+    replicate();
+
+    # sleep?
+    sleep( $CONFIG{ 'daemon' } ) if ( $CONFIG{ 'daemon' } );
+
+} while ( $CONFIG{ 'daemon' } );
+
+
+#
+#  All done.
+#
+exit(0);
