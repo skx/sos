@@ -198,6 +198,8 @@ func main() {
 	//
 	// If we received blob-servers on the command-line use them too.
 	//
+        // NOTE: blob-servers added on the command-line have no weights.
+        //
 	if blob != nil {
 		servers := strings.Split(*blob, ",")
 		for _, entry := range servers {
