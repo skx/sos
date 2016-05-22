@@ -161,8 +161,8 @@ func DownloadHandler(res http.ResponseWriter, req *http.Request) {
 	}
 
 	//
-	// If we reach here we've attempted our upload on every
-	// known blob-server and none accepted our upload.
+	// If we reach here we've attempted our download on every
+	// known blob-server and none succeeded.
 	//
 	// Let the caller know.
 	//
