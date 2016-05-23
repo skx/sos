@@ -11,11 +11,11 @@ The code is written in [golang](http://golang.com/), which should ease deploymen
 
 Building the code should pretty idiomatic for a golang user:
 
+     #
      # Download the code to $GOPATH/src
-     go get -d github.com/skx/sos/...
-
-     # Build and install the two binaries to $GOPATH/bin
-     go install github.com/skx/sos/...
+     # If already present is is updated.
+     #
+     go get -u github.com/skx/sos/...
 
 If you prefer to build manually:
 
