@@ -1,11 +1,7 @@
 Simple Object Storage, in golang
 --------------------------------
 
-The Simple Object Storage (SOS) is a HTTP-based object-storage system
-which allows files to be uploaded, and later retrieved by ID.
-
-Files can be replicated across a number of hosts to ensure redundancy,
-and despite the naive implementation it does scale to millions of files.
+The Simple Object Storage (SOS) is a HTTP-based object-storage system which allows files to be uploaded, and later retrieved by ID.  Files can be replicated across a number of hosts to ensure redundancy, and despite the naive implementation it does scale to millions of files.
 
 The code is written in [golang](http://golang.com/), which should ease deployment.
 
@@ -122,6 +118,8 @@ Production Usage
 * None of the servers need to be launched as root, because they don't bind to privileged ports, or require special access.
     * **NOTE**: [issue #6](https://github.com/skx/sos/issues/6) improved the security of the `blob-server` by invoking `chroot()`.  However `chroot()` will fail if the server is not launched as root, which is harmless.
 
+* Scaling when your data is too large to fit upon a single `blob-server`:
+   * [Read about scaling SoS](SCALING)
 
 
 Future Changes?
