@@ -83,6 +83,143 @@ use LWP::UserAgent;
 use Pod::Usage;
 
 
+package SOS::Servers;
+
+
+
+sub new
+{
+    my ($proto) = (@_);
+    my $class = ref($proto) || $proto;
+    my $self = {};
+
+    # servers
+    $self->{ 'servers' } = undef;
+
+    bless( $self, $class );
+
+    # Load our data.
+    $self->_readFiles();
+    return $self;
+}
+
+
+=begin doc
+
+Read the known configuration files we understand.
+
+Called when this object is instantiated.
+
+=end doc
+
+=cut
+
+sub _readFiles
+{
+    my ($self) = (@_);
+
+    $self->_readFile("/etc/sos.conf");
+    $self->_readFile( $ENV{ 'HOME' } . "/.sos.conf" );
+}
+
+
+=begin doc
+
+Read the known configuration files we understand.
+
+=end doc
+
+=cut
+
+sub _readFile
+{
+    my ( $self, $file ) = (@_);
+
+    return unless ( -e $file );
+
+    my @data;
+
+    open( my $handle, "<", $file ) or
+      die "Failed to open $file - $!";
+    while ( my $line = <$handle> )
+    {
+        chomp($line);
+        next if ( $line =~ /^#/ );
+
+        push( @data, $line );
+    }
+    close($handle);
+
+    #
+    #  OK this is either a literal list of servers, or
+    # a list of ini-like sections.
+    #
+    my $is_ini = 0;
+
+    foreach my $line (@data)
+    {
+        $is_ini = 1 if ( $line =~ /^\[(.*)\]$/ );
+    }
+
+    #
+    #  Parse literal list, simple
+    #
+    if ( $is_ini == 0 )
+    {
+        foreach my $line (@data)
+        {
+            if ( $line =~ /^http/i )
+            {
+                $self->{ 'servers' }{ "default" }{ $line } = 1;
+            }
+        }
+    }
+    else
+    {
+        # Parse INI-file
+        my $section = "";
+
+        foreach my $line (@data)
+        {
+            # section
+            if ( $line =~ /^\[(.*)\]$/ )
+            {
+                $section = $1;
+            }
+            if ( ( $line =~ /^-:(.*)$/ ) && $section )
+            {
+                # hostname
+                my $uri = $1;
+                $uri =~ s/^\s+//;
+                $uri =~ s/\s+$//;
+
+                $self->{ 'servers' }{ $section }{ $uri } = 1;
+            }
+        }
+    }
+}
+
+=begin doc
+
+Return the list of servers we've discovered via our configuration
+file parsing.
+
+=end doc
+
+=cut
+
+sub servers
+{
+    my ($self) = (@_);
+
+    return ( %{ $self->{ 'servers' } } );
+}
+
+
+
+
+package main;
+
 
 #
 #  Default options: Don't be verbose and require two copies of each object.
@@ -92,102 +229,81 @@ $CONFIG{ 'copies' }  = 2;
 $CONFIG{ 'verbose' } = 0;
 
 
-#
-# The list of blob-servers we know about.
-#
-my @servers;
-
-
-#
-#  The list of files on each server.
-#
-my %data;
-
-
-
 =begin doc
 
-Download the list of all files, and start the replication
-process.
+Given a list of servers make sure that each one has the same contents
+as the rest in the list.
 
 =end doc
 
 =cut
 
-sub replicate
+sub replicate_group
 {
-    #
-    # Get the list of files on each server.
-    #
-    %data = populateObjects();
-
+    my (@nodes) = (@_);
 
     #
-    # Ensure that the user isn't trying to replicate more than the
-    # number of servers.
+    # Get the list of objects on each server in the group.
     #
-    if ( $CONFIG{ 'copies' } > scalar(@servers) )
-    {
-        my $avail = scalar(@servers);
+    my %objects = populateObjects(@nodes);
 
-        print <<EOF;
-You've asked for an impossible number of replicated-copies:
-
-* You have $avail blob-servers available.
-* You've asked for $CONFIG{'copies'}.
-EOF
-        return;
-    }
-
-
-    #
     #
     # OK so we have a list of servers, and the objects each contains.
     #
-    # We want to make sure that each object is stored the given number
-    # of times.
+    # We want to make sure that every object is stored within every
+    # other node in that set.
     #
-    # So we want to build up a list of unique objects.
-    #
-    my %objects;
-
-    foreach my $server ( sort keys %data )
-    {
-        $CONFIG{ 'verbose' } && print "Objects stored on blob-server $server\n";
-        foreach my $id ( keys %{ $data{ $server } } )
-        {
-            $CONFIG{ 'verbose' } && print "\t$id\n";
-            $objects{ $id } += 1;
-        }
-        $CONFIG{ 'verbose' } && print "\n";
-    }
-
-
-    #
-    #  Unique objects.
-    #
-    $CONFIG{ 'verbose' } && print "\nBeginning replication scan.\n";
-
-    foreach my $object_id ( keys %objects )
+    foreach my $server ( sort keys %objects )
     {
         #
-        # The number of copies of this file which exists.
+        # So we've got a server we want to replicate
+        # make sure it is alive.
         #
-        my $replicas = $objects{ $object_id };
-
-        #
-        #  If it is too-few then we need to replicate it.
-        #
-        if ( $replicas < $CONFIG{ 'copies' } )
+        if ( is_alive($server) == 0 )
         {
-            $CONFIG{ 'verbose' } &&
-              print
-              "$replicas copies of $object_id required: $CONFIG{'copies'}\n";
+            print "SERVER OFFLINE - Skipping - $server\n";
+            next;
+        }
 
-            replicate_object( $object_id, ( $CONFIG{ 'copies' } - $replicas ) );
+        #
+        # Look for all other servers in the group
+        #
+        foreach my $mirror ( sort keys %objects )
+        {
+            next if ( $mirror eq $server );
+
+            $CONFIG{ 'verbose' } && print "Mirroring from $server -> $mirror\n";
+
+            if ( is_alive($mirror) == 0 )
+            {
+                print "SERVER OFFLINE - Cannot replicate $server -> $mirror\n";
+                next;
+            }
+
+            #
+            #  The objects we wish to replicate.
+            #
+            my @ids = keys %{ $objects{ $server } };
+
+            #
+            #  SHow them
+            #
+            foreach my $id (@ids)
+            {
+                $CONFIG{ 'verbose' } && print "\t$id";
+
+                if ( $objects{ $mirror }{ $id } )
+                {
+                    $CONFIG{ 'verbose' } && print " - present\n";
+                }
+                else
+                {
+                    $CONFIG{ 'verbose' } && print " - ";
+                    replicate_object( $id, $server, $mirror );
+                }
+            }
         }
     }
-    $CONFIG{ 'verbose' } && print "\nReplication scan complete.\n";
 
 }
 
@@ -199,104 +315,55 @@ EOF
 #
 sub replicate_object
 {
-    my ( $id, $copies_needed ) = (@_);
+    my ( $id, $src, $dst ) = (@_);
 
-    $CONFIG{ 'verbose' } && print "Attempting to replicate $id\n";
-
+    #  OK we've now got to download the content
     #
-    #  First of all find out where this file is located
-    #
-    my $location;
-    foreach my $server ( keys %data )
-    {
-        $location = $server if ( $data{ $server }{ $id } );
-    }
+    my $lwp = LWP::UserAgent->new;
+    my $uri = $src . "/blob/$id";
+    my $res = $lwp->get($uri);
 
-
-    #
-    #  If we didn't find it then we're screwed
-    #
-    die "Failed to find node containing $id" unless $location;
-
-
-    #
-    #  Now we need to find a server which doesn't have the file.
-    #
-    my @missing;
-    foreach my $server ( sort keys %data )
-    {
-        if ( $data{ $server }{ $id } )
-        {
-            $CONFIG{ 'verbose' } && print "\tFound on $server\n";
-        }
-        else
-        {
-            $CONFIG{ 'verbose' } &&
-              print "\t$server is a possible target for replication\n";
-            push( @missing, $server );
-        }
-    }
-
-    while ( $copies_needed > 0 )
+    if ( $res->is_success() )
     {
         #
-        #  Now we need to pick a server at random to upload the content to.
+        #  We have the data now, ensure it is UTF-8.
         #
-        my $r      = rand @missing;
-        my $random = $missing[$r];
-        delete( $missing[$r] );
-
-        die "Failed to find random server to upload to" unless ($random);
-        $CONFIG{ 'verbose' } && print "\tReplicating to $random\n";
+        my $data = $res->decoded_content();
+        my $body = encode( 'UTF-8', $data );
 
         #
-        #  OK we've now got to download the content
+        #  Now upload to new location
         #
-        my $lwp = LWP::UserAgent->new;
-        my $uri = $location . "/blob/$id";
-        my $res = $lwp->get($uri);
+        my $req = HTTP::Request->new( 'POST', $dst . "/blob/$id" );
+        $req->content($body);
 
+        my $res = $lwp->request($req);
         if ( $res->is_success() )
         {
-            #
-            #  We have the data now, ensure it is UTF-8.
-            #
-            my $data = $res->decoded_content();
-            my $body = encode( 'UTF-8', $data );
-
-            #
-            #  Now upload to new location
-            #
-            my $req = HTTP::Request->new( 'POST', $random . "/blob/$id" );
-            $req->content($body);
-
-            my $res = $lwp->request($req);
-            if ( $res->is_success() )
-            {
-                $CONFIG{ 'verbose' } && print "\tReplication successful\n";
-            }
-            else
-            {
-                print "\tFAILED " . $res->status_line() . "\n";
-            }
+            $CONFIG{ 'verbose' } && print "replicated.\n";
         }
         else
         {
-            die "Failed to download $uri to replicate to $random";
+            print "FAILED to replicate" . $res->status_line() . "\n";
         }
-
-        $copies_needed -= 1;
+    }
+    else
+    {
+        die "Failed to download $uri to replicate to $dst";
     }
 }
+
 
 #
 # Populate a hash of each known object on each server.
 #
 sub populateObjects
 {
+    my (@nodes) = (@_);
+
     my %ret;
 
-    foreach my $server ( sort(@servers) )
+    foreach my $server ( sort(@nodes) )
     {
         #
         #  Ensure this server has an empty hash against it.
@@ -306,6 +373,12 @@ sub populateObjects
 
         $CONFIG{ 'verbose' } &&
           print "Downloading contents of blob-server $server\n";
+
+        if ( is_alive($server) == 0 )
+        {
+            print "\tServer offline - $server\n";
+            next;
+        }
 
         my $lwp = LWP::UserAgent->new;
 
@@ -336,80 +409,40 @@ sub populateObjects
 
 =begin doc
 
-Take each of our global servers, as stored in C<@servers>
-and make a copy of those server-names which are alive and reachable.
+Is the given server alive?  (Caches result).
 
 =end doc
 
 =cut
 
-sub remove_dead_servers
+my %alive;
+
+sub is_alive
 {
-    #
-    #  We'll test each server is alive before using it.
-    #
-    my @result;
+    my ($server) = (@_);
+
+    return ( $alive{ $server } ) if ( defined $alive{ $server } );
+
 
     my $ua = LWP::UserAgent->new;
     $ua->timeout(10);
     $ua->env_proxy;
 
-    foreach my $s (@servers)
+    my $response = $ua->get( $server . '/alive' );
+    my $code     = $response->code();
+    my $body     = $response->decoded_content();
+
+    if ( $body && $body =~ /^alive$/i )
     {
-        next unless ( $s && ( $s =~ /http/i ) );
-
-        my $response = $ua->get( $s . '/alive' );
-        my $code     = $response->code();
-        my $body     = $response->decoded_content();
-
-        if ( $body && $body =~ /^alive$/i )
-        {
-            warn "Server online $s";
-            push( @result, $s );
-        }
-        else
-        {
-            warn "Server offline $s: $code";
-        }
+        $alive{ $server } = 1;
+    }
+    else
+    {
+        $alive{ $server } = 0;
     }
 
-    @servers = @result;
+    return ( $alive{ $server } );
 }
-
-
-=begin doc
-
-Add any valid server we find in the named file to the global
-C<@servers> array.
-
-=end doc
-
-=cut
-
-sub read_file
-{
-    my ($file) = (@_);
-
-    return unless -e $file;
-
-    open( my $handle, "<", $file ) or
-      return;
-    while ( my $line = <$handle> )
-    {
-        next unless $line;
-        chomp($line);
-
-        # skip comments and blank lines.
-        next unless ( $line =~ /^http/ );
-
-        # We only care about the server name here, not the weight.
-        my @words = split( /[ \t]/, $line );
-        push( @servers, $words[0] );
-    }
-    close($handle);
-
-}
-
 
 
 
@@ -440,39 +473,35 @@ pod2usage( -verbose => 2 ) if ( $CONFIG{ 'manual' } );
 do
 {
 
-    @servers = undef;
-    %data = ( 0 => 0 );
-    delete( $data{ 0 } );
-
-    #  Populate servers we know about.
-    read_file("/etc/sos.conf");
-    read_file( $ENV{ 'HOME' } . "/.sos.conf" );
-
-
-    #  Now remove any servers which are offline.
-    remove_dead_servers();
-
+    #
+    #  Parse the configuration file(s) so we get a list of servers.
+    #
+    my $obj = SOS::Servers->new();
+    my %srv = $obj->servers();
 
     #
     # If we have no servers then we must abort.
     #
-    if ( !scalar(@servers) )
+    if ( !scalar( keys %srv ) )
     {
         print <<EOF;
-In order to re-balance/replicate you must define a list of your object-servers.
-The list of servers should be placed in either
-
-~/.sos.conf
-/etc/sos.conf
-
-Either none are listed, or none are reachable.
-
+No servers were found in the configuration file(s).  Aborting.
 EOF
-        exit(0);
+        exit(1);
     }
 
 
-    replicate();
+    #
+    #  For each group we need to replicate the contents.
+    #
+    foreach my $group ( sort keys %srv )
+    {
+        $CONFIG{ 'verbose' } && print "Replicating group: $group\n";
+
+        my @nodes = sort keys( %{ $srv{ $group } } );
+
+        replicate_group(@nodes);
+    }
 
     # sleep?
     sleep( $CONFIG{ 'daemon' } ) if ( $CONFIG{ 'daemon' } );
