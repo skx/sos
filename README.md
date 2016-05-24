@@ -119,7 +119,7 @@ Production Usage
     * **NOTE**: [issue #6](https://github.com/skx/sos/issues/6) improved the security of the `blob-server` by invoking `chroot()`.  However `chroot()` will fail if the server is not launched as root, which is harmless.
 
 * Scaling when your data is too large to fit upon a single `blob-server`:
-   * [Read about scaling SoS](SCALING)
+   * [Read about scaling SoS](SCALING.md)
 
 
 Future Changes?
