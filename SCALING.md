@@ -64,14 +64,40 @@ The case of downloading an object is similar, although statistically because the
 There are two solutions that can be employed here:
 
 * We can realize download operations are more common, and maintain an index:
-    * Object `foo` lives on blob-server1
-    * Object `bar` lives on blob-server4
+    * Object `foo` lives on `blob-server1`
+    * Object `bar` lives on `blob-server4`
     * This doesn't solve the problem of uploads being tried too many times, but certainly speeds up downloads.
 * We can realize that the first three servers belong to a logical group.
     * So rather than iterating over blob-servers we iterate over groups.
 
 Of the two solutions the second is cleaner, because it doesn't rely upon maintaining state, and it solves the problem of both uploads and downloads.
 
-To define your relationships you merely need to update your configuration file `/etc/sos.conf` (or `~/.sos.conf`) to define the relationships between groups and nodes.
+To define your relationships you merely need to update your configuration file `/etc/sos.conf` (or `~/.sos.conf`) to list "groups" of hosts.  When that is done storage and retrieval will operate in terms of groups rather than in terms of hosts.
 
-TODO : Write more
+In our example above we defined two groups:
+
+* `blob-server1` - First server.
+   * `blob-server2` - Replicated copy of the previous server.
+* `blob-server3` - Second server.
+   * `blob-server4` - Replicated copy of the previous server.
+
+We'd define that by updating our configuration file to read:
+
+     [1]
+     -: http://blob-server1.example.com:1234
+     -: http://blob-server2.example.com:1234
+
+     [2]
+     -: http://blob-server3.example.com:1234
+     -: http://blob-server4.example.com:1234
+
+With this in place an upload operation will try the first server from the first group, then the first server from the second group.
+
+This allows efficient scaling, since the potential number of attempts is bounded by the number of _groups_, and not the number of _servers_.
+
+
+## Real World Usage
+
+In my personal deployment I have five sets of three servers, hosting in escess of 5 million objects.  Things work well.
+
+(I have so many servers because the disk-space allocated to each is pretty small.)
