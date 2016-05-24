@@ -3,26 +3,34 @@
 //
 // The list of blob-servers is read from /etc/sos.conf + ~/.sos.conf
 //
-// The general form of the line is:
+// The simple version of this file is a literal list of blob-servers:
 //
-//    http://$host:$port/ [weight]
+//    http://node1.example.com:3333/
+//    http://node2.example.com:3333/
+//    http://node3.example.com:3333/
 //
-// For example:
+// When you start to scale to more than a couple of servers this becomes
+// an INI-file, with one section per logical-grouping of blob-servers:
 //
-//    http://example.com:3333/
-//    http://example.com:3333/ 10
-//    http://example.com:3333/ 30
+//  [1]
+//  http://node1.example.com:1234/
+//  http://mirror1-1.example.com:1234/
+//  http://mirror1-2.example.com:1234/
 //
-//  If no weight is specified then the default will be used "0".
+//  [2]
+//  http://node2.example.com:1234/
+//  http://mirror2-1.example.com:1234/
+//  http://mirror2-1.example.com:1234/
+//
+// See `SCALING.md` for the rationale behind this setup.
 //
 
 package main
 
 import (
 	"bufio"
+	"github.com/go-ini/ini"
 	"os"
-	"sort"
-	"strconv"
 	"strings"
 )
 
@@ -32,25 +40,12 @@ import (
 // The blob-server has:
 //
 //  *  A location (host:port).
-//
-//  *  A weight.
-//
-// Weighting is implemented by ordering the hosts by the weight
-// field, such that the bigger numbers come first.
+//  *  A group to which it belongs.
 //
 type BlobServer struct {
 	location string
-	weight   int
+	group    string
 }
-
-//
-// Implement a sorting interface, of `weight`.
-//
-type ByWeight []BlobServer
-
-func (a ByWeight) Len() int           { return len(a) }
-func (a ByWeight) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-func (a ByWeight) Less(i, j int) bool { return a[i].weight > a[j].weight }
 
 //
 // The list of servers we've identified.
@@ -58,10 +53,103 @@ func (a ByWeight) Less(i, j int) bool { return a[i].weight > a[j].weight }
 var servers []BlobServer
 
 //
-// Return the list of servers we've read, sorted by weight order.
+// Return the list of servers we've discovered.
 //
 func Servers() []BlobServer {
 	return (servers)
+}
+
+//
+// This returns a priority-ordered list of servers which will be used
+// for uploads/downloads.
+//
+// Remember that we have potentially N groups.  We want to pick the first
+// server from each group, then the second server from each group, etc, etc.
+//
+// Given input
+//  group:1 host:host1
+//  group:1 host:host2
+//  group:2 host:host1
+//  group:2 host:host2
+//  group:3 host:host1
+//  group:3 host:host2
+//  group:3 host:host3
+//
+// The output should be:
+//
+//  group:1 host1
+//  group:2 host1
+//  group:3 host1
+//  group:1 host2
+//  group:2 host2
+//  group:3 host2
+//  group:3 host3
+//
+// This means we take three accesses to hit a server in each group, rather
+// than five.  Similar savings will add up when there are more groups and
+// servers.
+//
+func OrderedServers() []BlobServer {
+	var res []BlobServer
+
+	//
+	// Create a copy of `servers`, the global list of all
+	// known blob-servers
+	//
+	tmp := make([]BlobServer, len(servers))
+	copy(tmp, servers)
+
+	//
+	// Get the names of each distinct group.
+	//
+	groups := make(map[string]int)
+	for _, entry := range tmp {
+		groups[entry.group] += 1
+	}
+
+	//
+	//  Now we'll walk over our servers, until we've processed
+	// all of them.
+	//
+	processed := len(tmp)
+
+	//
+	//  NOTE: Dummy loop index.
+	//
+	for processed != 0 {
+
+		//
+		// Have we seen the given group on this loop?
+		//
+		seen := make(map[string]bool)
+
+		//
+		// For each server
+		//
+		for o, entry := range tmp {
+
+			//
+			// If this is the first time we've seen this group
+			//
+			if (!seen[entry.group]) && (entry.location != "#") {
+
+				// Record we've seen it now.
+				seen[entry.group] = true
+
+				// Add the appropriate entry to our result.
+				res = append(res, entry)
+
+				// Ensure we don't see it again.
+				tmp[o].location = "#"
+
+				// We've processed a fresh host
+				processed -= 1
+			}
+		}
+	}
+
+	// Return the magically reshuffled set of servers.
+	return (res)
 }
 
 //
@@ -70,39 +158,14 @@ func Servers() []BlobServer {
 func InitServers() {
 	ServersLoad("/etc/sos.conf")
 	ServersLoad(os.ExpandEnv("$HOME/.sos.conf"))
-
-	// Now run the sorting
-	sort.Sort(ByWeight(servers))
 }
 
 //
-// Add an entry to our server-list manually.
+// Add an entry to our server-list.
 //
-func AddServer(entry string) {
-
-	if strings.HasPrefix(entry, "http") {
-
-		// Split the line into fields,
-		// to see if there is a trailing number.
-		parts := strings.Fields(entry)
-
-		//
-		// If there is then the number is the weight.
-		//
-		weight := 0
-		if len(parts) > 1 {
-			weight, _ = strconv.Atoi(parts[1])
-		}
-
-		// Add the entry.
-		if len(parts) > 0 {
-			tmp := BlobServer{location: parts[0], weight: weight}
-			servers = append(servers, tmp)
-		}
-
-		// Now ensure our list is ordered by weight.
-		sort.Sort(ByWeight(servers))
-	}
+func AddServer(group string, entry string) {
+	tmp := BlobServer{location: entry, group: group}
+	servers = append(servers, tmp)
 }
 
 //
@@ -115,14 +178,117 @@ func ServersLoad(file string) {
 	}
 	defer inFile.Close()
 
+	//
+	// Here we temporarily save the servers we've found.
+	//
+	// We do this so that if we come across a line which
+	// looks like an ini-file then we can just abort.
+	//
+	tmp := []string{}
+
+	//
+	// Does this look like an INI-file?
+	//
+	ini_file := false
+
+	//
+	// Read the input-file line by line
+	//
 	scanner := bufio.NewScanner(inFile)
 	scanner.Split(bufio.ScanLines)
 	for scanner.Scan() {
-		//
-		// We've read a line.
-		//
 		line := scanner.Text()
 
-		AddServer(line)
+		//
+		// Does this line just have http://.... ?
+		//
+		// If so add the line to the temporary array.
+		//
+		if strings.HasPrefix(line, "http") {
+			tmp = append(tmp, line)
+		}
+
+		//
+		// Otherwise this might be an INI-file.
+		//
+		if strings.Contains(line, "[") {
+			// This is an INI-file
+			ini_file = true
+		}
+	}
+
+	//
+	// Is this an INI-file?
+	//
+	if ini_file {
+		//
+		// Parse it as an INI-file
+		//
+		cfg, err := ini.Load(file)
+		if err != nil {
+			panic(err)
+		}
+
+		//
+		//  Process each section
+		//
+		sections := cfg.Sections()
+		for _, name := range sections {
+
+			if name.Name() != "DEFAULT" {
+
+				//
+				//  Get the keys.
+				//
+				keys := cfg.Section(name.Name()).Keys()
+
+				for _, val := range keys {
+
+					//
+					// For each entry add to the server-list.
+					//
+					AddServer(name.Name(), val.String())
+				}
+			}
+		}
+		return
+
+	} else {
+		//
+		// This was not an INI-file, so we just create a new
+		// entry for each line we read natively.
+		//
+		// We'll call the (anonymous) group "default".
+		for _, s := range tmp {
+			AddServer("default", s)
+		}
 	}
 }
+
+//
+//  Test-code.
+//
+// func main() {
+//
+// 	InitServers()
+//
+// 	//
+// 	// Default, post-parse order
+// 	//
+// 	fmt.Printf("Default order:\n")
+// 	fmt.Printf("\t% 12s - %s\n", "group", "hosts" )
+// 	for _, entry := range Servers() {
+// 		fmt.Printf("\t% 12s - %s\n", entry.group, entry.location)
+// 	}
+//
+// 	//
+// 	// Now the the order we prefer
+// 	//
+// 	fmt.Printf("Improved order:\n")
+// 	fmt.Printf("\t% 12s - %s\n", "group", "hosts" )
+// 	for _, entry := range OrderedServers() {
+// 		fmt.Printf("\t% 12s - %s\n", entry.group, entry.location)
+// 	}
+//
+// }
+//

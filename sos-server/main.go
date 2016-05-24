@@ -1,5 +1,5 @@
 /*
- * api_server.go
+ * main.go - API Server
  *
  * Trivial rewrite of the api-server in #golang.
  *
@@ -37,9 +37,25 @@ type myReader struct {
  */
 func (m myReader) Close() error { return nil }
 
-/**
- * Upload a file to to the public-root.
- */
+//
+// Upload-handler.
+//
+// This should attempt to upload against the blob-servers and return
+// when that is complete.  If there is a failure then it should
+// repeat the process until all known servers are exhausted.
+//
+// The retry logic is described in the file `SCALING.md` in the
+// repository, but in brief there are two cases:
+//
+//  * All the servers are in the group `default`.
+//
+//  * There are N defined groups.
+//
+// Both cases are handled by the call to OrderedServers() which
+// returns the known blob-servers in a suitable order to minimize
+// lookups.  See `SCALING.md` for more details.
+//
+//
 func UploadHandler(res http.ResponseWriter, req *http.Request) {
 
 	//
@@ -68,7 +84,7 @@ func UploadHandler(res http.ResponseWriter, req *http.Request) {
 	// We try each blob-server in turn, and if/when we receive
 	// a successful result we'll return it to the caller.
 	//
-	for _, s := range Servers() {
+	for _, s := range OrderedServers() {
 
 		//
 		// Replace the request body with the (second) copy we made.
@@ -112,9 +128,25 @@ func UploadHandler(res http.ResponseWriter, req *http.Request) {
 
 }
 
-/**
- * Download a file.
- */
+//
+// Download-handler.
+//
+// This should attempt to download against the blob-servers and return
+// when that is complete.  If there is a failure then it should
+// repeat the process until all known servers are exhausted..
+//
+// The retry logic is described in the file `SCALING.md` in the
+// repository, but in brief there are two cases:
+//
+//  * All the servers are in the group `default`.
+//
+//  * There are N defined groups.
+//
+// Both cases are handled by the call to OrderedServers() which
+// returns the known blob-servers in a suitable order to minimize
+// lookups.  See `SCALING.md` for more details.
+//
+//
 func DownloadHandler(res http.ResponseWriter, req *http.Request) {
 
 	//
@@ -133,7 +165,7 @@ func DownloadHandler(res http.ResponseWriter, req *http.Request) {
 	// We try each blob-server in turn, and if/when we receive
 	// a successfully result we'll return it to the caller.
 	//
-	for _, s := range Servers() {
+	for _, s := range OrderedServers() {
 
 		//
 		// Build up a request, which is a HTTP-GET
@@ -182,37 +214,53 @@ func main() {
 	blob := flag.String("blob-server", "", "Comma-separated list of blob-servers to contact.")
 	dport := flag.Int("download-port", 9992, "The port to bind upon for downloading objects.")
 	uport := flag.Int("upload-port", 9991, "The port to bind upon for uploading objects.")
+	dump := flag.Bool("dump", false, "Dump configuration and exit?.")
 	flag.Parse()
-
-	//
-	// Show a banner.
-	//
-	fmt.Printf("Launching API-server\n")
-	fmt.Printf("\nUpload service\nhttp://%s:%d/upload\n", *host, *uport)
-	fmt.Printf("\nDownload service\nhttp://%s:%d/fetch/:id\n", *host, *dport)
-	//
-	//  Initialize the servers.
-	//
-	InitServers()
 
 	//
 	// If we received blob-servers on the command-line use them too.
 	//
-        // NOTE: blob-servers added on the command-line have no weights.
-        //
-	if blob != nil {
+	// NOTE: blob-servers added on the command-line are placed in the
+	// "default" group.
+	//
+	if (blob != nil) && (*blob != "") {
 		servers := strings.Split(*blob, ",")
 		for _, entry := range servers {
-			AddServer(entry)
+			AddServer("default", entry)
 		}
+	} else {
+
+		//
+		//  Initialize the servers from our config file(s).
+		//
+		InitServers()
 	}
+
+	//
+	// If we're merely dumping the servers then do so now.
+	//
+	if *dump {
+		fmt.Printf("\t% 10s - %s\n", "group", "server")
+		for _, entry := range Servers() {
+			fmt.Printf("\t% 10s - %s\n", entry.group, entry.location)
+		}
+		return
+	}
+
+	//
+	// Otherwise show a banner, then launch the server-threads.
+	//
+	fmt.Printf("Launching API-server\n")
+	fmt.Printf("\nUpload service\nhttp://%s:%d/upload\n", *host, *uport)
+	fmt.Printf("\nDownload service\nhttp://%s:%d/fetch/:id\n", *host, *dport)
 
 	//
 	// Show the blob-servers, and their weights
 	//
-	fmt.Printf("\nBlob-servers, by weight:\n")
+	fmt.Printf("\nBlob-servers:\n")
+	fmt.Printf("\t% 10s - %s\n", "group", "server")
 	for _, entry := range Servers() {
-		fmt.Printf("\t% 4d - %s\n", entry.weight, entry.location)
+		fmt.Printf("\t% 10s - %s\n", entry.group, entry.location)
 	}
 	fmt.Printf("\n")
 
