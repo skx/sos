@@ -1,4 +1,4 @@
-default: blob_server
+default: blob-server
 
 clean:
 	go clean
@@ -6,9 +6,5 @@ clean:
 fmt:
 	go fmt *.go
 
-libs:
-	test -d $$GOPATH/github.com/gorilla/mux || go get github.com/gorilla/mux
-
-
-blob_server: libs 
+blob-server: $(wildcard *.go)
 	go build .

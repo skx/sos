@@ -1,4 +1,4 @@
-default: api_server
+default: sos-server
 
 clean:
 	go clean
@@ -6,9 +6,5 @@ clean:
 fmt:
 	go fmt *.go
 
-libs:
-	test -d $$GOPATH/github.com/gorilla/mux || go get github.com/gorilla/mux
-
-
-api_server: libs 
+sos-server: $(wildcard *.go)
 	go build .
