@@ -21,7 +21,13 @@ If you're paranoid, and I would recommend this myself, then you'd run three serv
 
 At the point that your first server starts to become full though there will need to be some thought put into how you deploy things.
 
-Configuring this initial deployment requires nothing special, simply list the hosts in your global configuration file `/etc/sos.conf`, or `~/.sos.conf` and all will be well.
+Configuring this deployment just requires you populate your list of servers in the configuration file `/etc/sos.conf`, or `~/.sos.conf`:
+
+     # Comments are fine
+     http://node1.example.com:1234
+     http://node2.example.com:1234
+     http://node3.example.com:1234
+     http://node4.example.com:1234
 
 **NOTE** Don't forget to schedule the `bin/replicate` script to ensure that you do indeed have replicas of your content!
 
@@ -98,6 +104,6 @@ This allows efficient scaling, since the potential number of attempts is bounded
 
 ## Real World Usage
 
-In my personal deployment I have five sets of three servers, hosting in escess of 5 million objects.  Things work well.
+In my personal deployment I have five sets of three servers, hosting in excess of 5 million objects.  Things work well.
 
 (I have so many servers because the disk-space allocated to each is pretty small.)
