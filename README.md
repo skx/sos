@@ -110,10 +110,13 @@ Production Usage
 ----------------
 
 * The API service must be visible to clients, to allow downloads to be made.
+    * Because the download service runs on port `9992` it is assumed that corporate firewalls would deny access.
+    * We assume you'll configure an Apache/nginx/similar reverse-proxy to access the files via a host like http://objects.example.com/`.
 
 * It is assumed you might wish to restrict uploads to particular clients, rather than allow the world to make uploads.  The simplest way of doing this is to use a local firewall.
 
-* The blob-servers should be reachable by the hosts running the API-service, but they do not need to be publicly visible, these should be firewalled.
+* The blob-servers should be reachable by the hosts running the API-service, but they should not be publicly visible.
+    * If your blob-servers are exposed to the internet remote users could [use the API](API.md) to download all your content.
 
 * None of the servers need to be launched as root, because they don't bind to privileged ports, or require special access.
     * **NOTE**: [issue #6](https://github.com/skx/sos/issues/6) improved the security of the `blob-server` by invoking `chroot()`.  However `chroot()` will fail if the server is not launched as root, which is harmless.
