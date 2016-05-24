@@ -125,19 +125,16 @@ Production Usage
 Future Changes?
 ---------------
 
-There are two specific changes which would be useful to see in the future:
-
-* Marking particular blob-servers as preferred, or read-only.
-     * If you have 10 servers, 8 of which are full, then it becomes useful to know that explicitly, rather than learning at runtime when many operations have to be retried, repeated, or canceled.
-* Caching the association between object-IDs and the blob-server(s) upon which it is stored.
-     * This would become more useful as the number of the blob-servers rises.
-
 It would be possible to switch to using _chunked_ storage, for example breaking up each file that is uploaded into 128Mb sections and treating them as distinct.  The reason that is not done at the moment is because it relies upon state:
 
-* The public server needs to be able to know that the file with ID "NNNNABCDEF1234" is comprised of chunks "11111", "222222", "AAAAAA", "BBBBBB", & etc.
+* The public server needs to be able to know that the file with a given ID is comprised of the following chunks of data:
+    * `a5d606958533634fed7e6d5a79d6a5617252021f`
+    * `038deb6940db2d0e7b9ee9bba70f3501a0667989`
+    * `a7914eb6ff984f97c5f6f365d3d93961be2e8617`
+    * `...`
 * That data must be always kept up to date and accessible.
 
-At the moment the API-server is stateless.  You could even run 20 of them, behind a load-balancer, with no concerns about locking or sharing!  Adding state spoils that, and the complexity has not yet been judged worthwhile.
+At the moment the API-server is stateless, so tracking that data is not possible.  It possible to imagine using [redis](http://redis.io/), or some other external database to record the data, but that increases the complexity of deployment.
 
 
 Questions?
