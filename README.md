@@ -1,15 +1,18 @@
 Simple Object Storage, in golang
 --------------------------------
 
-The Simple Object Storage (SOS) is a HTTP-based object-storage system which allows files to be uploaded, and later retrieved by ID.  Files can be replicated across a number of hosts to ensure redundancy, and despite the naive implementation it does scale to millions of files.
+The Simple Object Storage (SOS) is a HTTP-based object-storage system which allows files to be uploaded, and later retrieved by ID.  Files can be replicated across a number of hosts to ensure redundancy, and despite the naive implementation it does [scale to millions of files](SCALING.md).
 
-The code is written in [golang](http://golang.com/), which should ease deployment.
+
+
+Installation
+------------
 
 Building the code should pretty idiomatic for a golang user:
 
      #
      # Download the code to $GOPATH/src
-     # If already present is is updated.
+     # If already present is should be updated.
      #
      go get -u github.com/skx/sos/...
 
@@ -18,6 +21,14 @@ If you prefer to build manually:
      $ git clone https://github.com/skx/sos.git
      $ cd sos
      $ make
+
+Once built you'll find three binaries:
+
+| Path          | Purpose                                    |
+|---------------|--------------------------------------------|
+| bin/replicate | The Perl based replication utility.        |
+| sos-server    | The public-facing upload/download service. |
+| blob-server   | The blob-server used for storing content.  |
 
 
 
@@ -55,7 +66,7 @@ Quick Start
 In an ideal deployment at least two servers would be used:
 
 * One server would run the API-server, which allows uploads to be made, and later retrieved.
-* Each of the two servers would run a blob-service, allowing a single uploaded object to be replicated upon both hosts.
+* Each of the two servers would run a `blob-server`, allowing an object to be replicated upon both hosts.
 
 We can replicate this upon a single host though, for the purposes of testing.  You'll just need to make sure you have four terminals open to run the appropriate daemons.
 
@@ -77,8 +88,8 @@ We start the `sos-server` ensuring that it knows about the blob-servers to store
 
 Now you, or your code, can connect to the server and start uploading/downloading objects.  By default the following ports will be used by the `sos-server`:
 
-|service          | port |
-|---------------- | ---- |
+|service           | port |
+|----------------- | ---- |
 | upload service   | 9991 |
 | download service | 9992 |
 
