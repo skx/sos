@@ -13,7 +13,6 @@ replicate - The SOS replication utility
   General Options:
 
    --deamon      Specify that we should run constantly.
-   --min-copies  Specify the minimum copies of data required.
    --verbose     Show more explicitly what is going on.
 
   Help Options:
@@ -25,30 +24,48 @@ replicate - The SOS replication utility
 
 =head1 OVERVIEW
 
-This utility is designed to synchronize the contents of an arbitrary
-number of blob-servers.  It does this by contacting each known blob-server
-and retrieving a list of the objects stored upon it.
+This utility is designed to synchronize the contents of each member of
+a group of blob-servers.
 
-For each object we then look to see how many times it is replicated,
-if a particular object is not stored sufficient times it is uploaded
-to other random blob-servers until the threshold is reached.
+blob-servers are defined in terms of groups, in the configuration file
+C</etc/sos.conf> or C<~/.sos.conf>.  The most simple deployment consists
+of a small number of servers all in the same group:
 
-The list of servers to contact is read from either:
+=for example begin
 
-=over 8
+    $ cat ~/.sos.conf
+    http://127.0.0.1:4000
+    http://127.0.0.1:4001
+    http://127.0.0.1:4002
 
-=item /etc/sos.conf
+=for example end
 
-=item ~/.sos.conf
+In this case there are three members in the group, so the uploaded objects
+will be replicated twice, ensuring there are three copies in total.
 
-=back
+In more realistic real-world deployments your definitions will contain
+multiple groups - in that case replication will operate solely between
+hosts defined in the same group.  For example you might define two groups
+each of which has objects copied twice:
+
+=for example begin
+
+    $ cat ~/.sos.conf
+    [1]
+    -: http://127.0.0.1:4000
+    -: http://127.0.0.1:4001
+    [2]
+    -: http://127.0.0.1:5000
+    -: http://127.0.0.1:5001
+
+=for example end
 
 =cut
 
 =head1 NOTES
 
 It is not necessary for the blob-servers to communicate with each other,
-providing the host running the replicate-script can communicate with
+providing the host running this replication script can communicate with
 each of them.
 
 =cut
@@ -261,7 +278,7 @@ sub replicate_group
         #
         if ( is_alive($server) == 0 )
         {
-            print "SERVER OFFLINE - Skipping - $server\n";
+            print "blob-server offline: $server\n";
             next;
         }
 
@@ -276,7 +293,7 @@ sub replicate_group
 
             if ( is_alive($mirror) == 0 )
             {
-                print "SERVER OFFLINE - Cannot replicate $server -> $mirror\n";
+                print "Replication target offline: $mirror\n";
                 next;
             }
 
@@ -374,11 +391,7 @@ sub populateObjects
         $CONFIG{ 'verbose' } &&
           print "Downloading contents of blob-server $server\n";
 
-        if ( is_alive($server) == 0 )
-        {
-            print "\tServer offline - $server\n";
-            next;
-        }
+        next if ( is_alive($server) == 0 );
 
         my $lwp = LWP::UserAgent->new;
 
@@ -454,11 +467,10 @@ exit
     !GetOptions(
 
         # Help options
-        "help",         \$CONFIG{ 'help' },
-        "manual",       \$CONFIG{ 'manual' },
-        "verbose",      \$CONFIG{ 'verbose' },
-        "min-copies=i", \$CONFIG{ 'copies' },
-        "daemon=i",     \$CONFIG{ 'daemon' },
+        "help",     \$CONFIG{ 'help' },
+        "manual",   \$CONFIG{ 'manual' },
+        "verbose",  \$CONFIG{ 'verbose' },
+        "daemon=i", \$CONFIG{ 'daemon' },
     ) );
 
 
