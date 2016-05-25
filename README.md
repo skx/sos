@@ -98,7 +98,7 @@ Production Usage
 
 * The API service must be visible to clients, to allow downloads to be made.
     * Because the download service runs on port `9992` it is assumed that corporate firewalls would deny access.
-    * We assume you'll configure an Apache/nginx/similar reverse-proxy to access the files via a host like http://objects.example.com/`.
+    * We assume you'll configure an Apache/nginx/similar reverse-proxy to access the files via a host like `http://objects.example.com/`.
 
 * It is assumed you might wish to restrict uploads to particular clients, rather than allow the world to make uploads.  The simplest way of doing this is to use a local firewall.
 
