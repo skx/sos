@@ -1,8 +1,14 @@
 Simple Object Storage, in golang
 --------------------------------
 
-The Simple Object Storage (SOS) is a HTTP-based object-storage system which allows files to be uploaded, and later retrieved by ID.  Files can be replicated across a number of hosts to ensure redundancy, and despite the naive implementation it does [scale to millions of files](SCALING.md).
+The Simple Object Storage (SOS) is a HTTP-based object-storage system which allows files to be uploaded, and later retrieved by ID.
 
+Files can be replicated across a number of hosts to ensure redundancy, and increase availability in the event of hardware failure.
+
+* [The design of the system](DESIGN.md).
+* [Scaling to large numbers of objects](SCALING.md).
+* [How replication works](REPLICATION.md).
+* [The APIs we present, both internal and private](API.md).
 
 
 Installation
@@ -32,43 +38,16 @@ Once built you'll find three binaries:
 
 
 
-Simple Design
--------------
-
-The implementation of the object-store is built upon the primitive of a "blob server".  A blob server is a dumb service which provides three simple operations:
-
-* Store a particular chunk of binary data with a specific name.
-* Given a name retrieve the chunk of binary data associated with it.
-* Return a list of all known names.
-
-These primitives are sufficient to provide a robust replicating storage system, because it is possible to easily mirror their contents, providing we assume that the IDs only ever hold a particular set of data (i.e. data is immutable).
-
-To replicate the contents of `blob-server-a` to `blob-server-b` the algorithm is obvious:
-
-* Get the list of known-names of the blobs stored on `blob-server-a`.
-* For each name, fetch the data associated with that name.
-    * Now store that data, with the same name, on `blob-server-b`.
-
-In real world situations the replication might become more complex over time, as different blob-servers might be constrained by differing amounts of disk-space, etc.  But the core-operation is both obvious and simple to implement.
-
-(In the future you could imagine switching to from the HTTP-based blob-server to using something else: [redis](http://redis.io/), [memcached](https://memcached.org/), or [postgresql](http://postgresql.org/) would be obvious candidates!)
-
-Ultimately the blob-servers provide the storage for the object-store, and the upload/download service just needs to mediate between them.  There isn't fancy logic or state to maintain, beyond that local to each node, so it is possible to run multiple blob-servers and multiple API-servers if required.
-
-The important thing is to ensure that a replication-job is launched regularly, to ensure that blob-servers __are__ replicated:
-
-    ./bin/replicate -v
-
 
 Quick Start
 -----------
 
 In an ideal deployment at least two servers would be used:
 
-* One server would run the API-server, which allows uploads to be made, and later retrieved.
+* One server would run the `sos-server`, which allows uploads to be made, and later retrieved.
 * Each of the two servers would run a `blob-server`, allowing an object to be replicated upon both hosts.
 
-We can replicate this upon a single host though, for the purposes of testing.  You'll just need to make sure you have four terminals open to run the appropriate daemons.
+We can simulate this upon a single host though, for the purposes of testing.  You'll just need to make sure you have four terminals open to run the appropriate daemons.
 
 First of all you'll want to launch a pair of blob-servers:
 
@@ -110,9 +89,6 @@ At the point you run the upload the contents will only be present on one of the 
 
     $ ./bin/replicate --verbose
 
-The default is to replicate all files into two servers, if you were running three blob-servers you could ensure that each one has all the files:
-
-    $ ./bin/replicate --verbose --min-copies=3
 
 
 
