@@ -114,6 +114,7 @@ func GetHandler(res http.ResponseWriter, req *http.Request) {
 				// of the returned value.
 				//
 				if k == "X-Mime-Type" {
+					res.Header().Set(k, v)
 					k = "Content-Type"
 				}
 
