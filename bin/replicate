@@ -395,7 +395,7 @@ sub populateObjects
 
         my $lwp = LWP::UserAgent->new;
 
-        my $uri = $server . "/blob";
+        my $uri = $server . "/blobs";
         my $res = $lwp->get($uri);
 
         if ( $res->is_success() )

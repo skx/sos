@@ -267,7 +267,7 @@ func main() {
 	router.HandleFunc("/blob/{id}", GetHandler).Methods("GET")
 	router.HandleFunc("/blob/{id}", GetHandler).Methods("HEAD")
 	router.HandleFunc("/blob/{id}", UploadHandler).Methods("POST")
-	router.HandleFunc("/blob", ListHandler).Methods("GET")
+	router.HandleFunc("/blobs", ListHandler).Methods("GET")
 	router.PathPrefix("/").HandlerFunc(MissingHandler)
 	http.Handle("/", router)
 

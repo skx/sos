@@ -14,9 +14,9 @@ There are two APIs we present, one from each deamon:
 
 The blob-server is designed to store "data" with an "id".  The data may be any binary string of arbitrary length, whereas the ID is assumed to be an alphanumeric string.
 
-> GET /blob/
+> GET /blobs
 
-* Return a JSON array of all know object-IDs.
+* Return a JSON array of all known object-IDs.
 
 > POST /blob/${id}
 
