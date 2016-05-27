@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"os"
+	"strings"
 	"syscall"
 )
 
@@ -201,7 +202,11 @@ func (this *FilesystemStorage) Existing() []string {
 
 	files, _ := ioutil.ReadDir(".")
 	for _, f := range files {
-		list = append(list, f.Name())
+		name := f.Name()
+
+		if !strings.HasSuffix(name, ".json") {
+			list = append(list, name)
+		}
 	}
 	return list
 }
