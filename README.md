@@ -91,6 +91,36 @@ At the point you run the upload the contents will only be present on one of the 
 
 
 
+Meta-Data
+---------
+
+When uploading objects it is often useful to store meta-data, such as the original name of the uploaded object, the owner, or similar.
+
+For that reason any header you add to your upload with an X-prefix will be stored and returned on download.
+
+As a special case the header `X-Mime-Type` can be used to set the returned `Content-Type` header too.
+
+For example uploading an image might look like this:
+
+    $ curl -X POST -H "X-Orig-Filename: steve.jpg" \
+                   -H "X-MIME-Type: image/jpeg" \
+                   --data-binary @$HOME/Images/tmp/steve.jpg \
+            http://localhost:9991/upload
+    {"id":"20b30df22469e6d7617c7da6a457d4e384945a06","status":"OK","size":17599}
+
+Downloading will result in the headers being set:
+
+   $ curl -v http://localhost:9992/fetch/20b30df22469e6d7617c7da6a457d4e384945a06 >/dev/null
+   ..
+   < HTTP/1.1 200 OK
+   < X-Orig-Filename: steve.jpg
+   < Date: Fri, 27 May 2016 06:17:39 GMT
+   < Content-Type: image/jpeg
+   < Transfer-Encoding: chunked
+   <
+   { [data not shown]
+
+
 
 
 Production Usage
