@@ -15,6 +15,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"regexp"
+	"strings"
 )
 
 //
@@ -92,10 +93,36 @@ func GetHandler(res http.ResponseWriter, req *http.Request) {
 	// If we reached this point then the request was a GET
 	// so we lookup the data, returning it if present.
 	//
-	data := STORAGE.Get(id)
+	data, meta := STORAGE.Get(id)
+
+	//
+	// The data was missing..
+	//
 	if data == nil {
 		http.NotFound(res, req)
 	} else {
+
+		//
+		// The meta-data will be used to populate the HTTP-response
+		// headers.
+		//
+		if meta != nil {
+			for k, v := range meta {
+
+				//
+				// Special case to set the content-type
+				// of the returned value.
+				//
+				if k == "X-Mime-Type" {
+					k = "Content-Type"
+				}
+
+				//
+				// Add the response header.
+				//
+				res.Header().Set(k, v)
+			}
+		}
 		fmt.Fprintf(res, string(*data))
 	}
 }
@@ -175,9 +202,22 @@ func UploadHandler(res http.ResponseWriter, req *http.Request) {
 	}
 
 	//
+	// If we received any X-headers in our request then save
+	// them to our extra-hash.  These will be persisted and
+	// restored
+	//
+	extras := make(map[string]string)
+
+	for header, value := range req.Header {
+		if strings.HasPrefix(header, "X-") {
+			extras[header] = value[0]
+		}
+	}
+
+	//
 	// Store the body, via our interface.
 	//
-	result := STORAGE.Store(id, content)
+	result := STORAGE.Store(id, content, extras)
 	if result == false {
 		status = http.StatusInternalServerError
 		return
