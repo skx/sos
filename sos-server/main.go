@@ -93,11 +93,29 @@ func UploadHandler(res http.ResponseWriter, req *http.Request) {
 		req.Body = rdr2
 
 		//
-		// Build up a request, which is a HTTP-POST
+		// This is where we'll POST to.
 		//
-		r, err := http.Post(
-			fmt.Sprintf("%s%s%x", s.location, "/blob/", hash),
-			"", req.Body)
+		url := 	fmt.Sprintf("%s%s%x", s.location, "/blob/", hash)
+
+		//
+		// Build up a new request.
+		//
+		child, _ := http.NewRequest("POST", url, req.Body)
+
+		//
+		// Propogate any incoming X-headers
+		//
+		for header, value := range req.Header {
+			if strings.HasPrefix(header, "X-") {
+				child.Header.Set( header, value[0] )
+			}
+		}
+
+		//
+		// Send the request.
+		//
+		client := &http.Client{}
+		r, err := client.Do(child)
 
 		//
 		// If there was no error we're good.
@@ -183,10 +201,24 @@ func DownloadHandler(res http.ResponseWriter, req *http.Request) {
 			// We read the reply we received from the
 			// blob-server and return it to the caller.
 			//
-			response, _ := ioutil.ReadAll(response.Body)
+			body, _ := ioutil.ReadAll(response.Body)
 
-			if response != nil {
-				fmt.Fprintf(res, string(response))
+			if body != nil {
+
+				//
+				// Copy any X-Header which was present
+				// into the reply too.
+				//
+				for header, value := range response.Header {
+					if strings.HasPrefix(header, "X-") {
+						res.Header().Set( header, value[0] )
+					}
+				}
+
+				//
+				// Now send back the body.
+				//
+				fmt.Fprintf(res, string(body))
 				return
 			}
 		}
