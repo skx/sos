@@ -95,7 +95,7 @@ func UploadHandler(res http.ResponseWriter, req *http.Request) {
 		//
 		// This is where we'll POST to.
 		//
-		url := 	fmt.Sprintf("%s%s%x", s.location, "/blob/", hash)
+		url := fmt.Sprintf("%s%s%x", s.location, "/blob/", hash)
 
 		//
 		// Build up a new request.
@@ -107,7 +107,7 @@ func UploadHandler(res http.ResponseWriter, req *http.Request) {
 		//
 		for header, value := range req.Header {
 			if strings.HasPrefix(header, "X-") {
-				child.Header.Set( header, value[0] )
+				child.Header.Set(header, value[0])
 			}
 		}
 
@@ -211,7 +211,7 @@ func DownloadHandler(res http.ResponseWriter, req *http.Request) {
 				//
 				for header, value := range response.Header {
 					if strings.HasPrefix(header, "X-") {
-						res.Header().Set( header, value[0] )
+						res.Header().Set(header, value[0])
 					}
 				}
 
