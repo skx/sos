@@ -349,11 +349,29 @@ sub replicate_object
         my $body = encode( 'UTF-8', $data );
 
         #
-        #  Now upload to new location
+        # Get the headers
+        #
+        my $headers = $res->headers();
+
+        #
+        #  Prepare to upload to new location
         #
         my $req = HTTP::Request->new( 'POST', $dst . "/blob/$id" );
+
+        #
+        #  Add the content, and any headers.
+        #
         $req->content($body);
 
+        foreach my $header ( keys %{ $headers } )
+        {
+            $req->header( $header, $headers->{ $header } )
+              if ( $header =~ /^x-/i );
+        }
+
+        #
+        # Make the request
+        #
         my $res = $lwp->request($req);
         if ( $res->is_success() )
         {
