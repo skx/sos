@@ -77,7 +77,7 @@ Providing you've started all three daemons you can now perform a test upload wit
     $ curl -X POST --data-binary @/etc/passwd  http://localhost:9991/upload
     {"id":"cd5bd649c4dc46b0bbdf8c94ee53c1198780e430","size":2306,"status":"OK"}
 
-If all goes well you'll receive a JSON-response as shown, and you can use the ID which is returned to retrieve your download:
+If all goes well you'll receive a JSON-response as shown, and you can use the ID which is returned to retrieve your object:
 
     $ curl http://localhost:9992/fetch/cd5bd649c4dc46b0bbdf8c94ee53c1198780e430
     ..
@@ -85,7 +85,7 @@ If all goes well you'll receive a JSON-response as shown, and you can use the ID
 
 > **NOTE**: The download service runs on a different port.  This is so that you can make policy decisions about uploads/downloads via your local firewall.
 
-At the point you run the upload the contents will only be present on one of the blob-servers, chosen at random, to ensure that it is mirrored you'll want to replicate the contents:
+At the point you run the upload the contents will only be present on one of the blob-servers, chosen at random.  To ensure your data is replicated you need to (regularly) launch the replication utility:
 
     $ ./bin/replicate --verbose
 
@@ -94,9 +94,7 @@ At the point you run the upload the contents will only be present on one of the 
 Meta-Data
 ---------
 
-When uploading objects it is often useful to store meta-data, such as the original name of the uploaded object, the owner, or similar.
-
-For that reason any header you add to your upload with an X-prefix will be stored and returned on download.
+When uploading objects it is often useful to store meta-data, such as the original name of the uploaded object, the owner, or some similar data.  For that reason any header you add to your upload with an `X-`prefix will be stored and returned on download.
 
 As a special case the header `X-Mime-Type` can be used to set the returned `Content-Type` header too.
 
@@ -104,7 +102,7 @@ For example uploading an image might look like this:
 
     $ curl -X POST -H "X-Orig-Filename: steve.jpg" \
                    -H "X-MIME-Type: image/jpeg" \
-                   --data-binary @$HOME/Images/tmp/steve.jpg \
+                   --data-binary @/home/skx/Images/tmp/steve.jpg \
             http://localhost:9991/upload
     {"id":"20b30df22469e6d7617c7da6a457d4e384945a06","status":"OK","size":17599}
 
@@ -130,15 +128,15 @@ Production Usage
     * Because the download service runs on port `9992` it is assumed that corporate firewalls would deny access.
     * We assume you'll configure an Apache/nginx/similar reverse-proxy to access the files via a host like `http://objects.example.com/`.
 
-* It is assumed you might wish to restrict uploads to particular clients, rather than allow the world to make uploads.  The simplest way of doing this is to use a local firewall.
+* It is assumed you might wish to restrict uploads to particular clients, rather than allow the world to make uploads.  The simplest way of doing this is to use your firewall to filter access to port `9991`.
 
-* The blob-servers should be reachable by the hosts running the API-service, but they should not be publicly visible.
-    * If your blob-servers are exposed to the internet remote users could [use the API](API.md) to download all your content.
+* The blob-servers must be reachable by the host(s) running the API-service, but they should not be publicly visible.
+    * If your blob-servers are exposed to the internet remote users could [use the API](API.md) to spider and download all your content.
 
 * None of the servers need to be launched as root, because they don't bind to privileged ports, or require special access.
     * **NOTE**: [issue #6](https://github.com/skx/sos/issues/6) improved the security of the `blob-server` by invoking `chroot()`.  However `chroot()` will fail if the server is not launched as root, which is harmless.
 
-* Scaling when your data is too large to fit upon a single `blob-server`:
+* You can also read about scaling when your data is too large to fit upon a single `blob-server`:
    * [Read about scaling SoS](SCALING.md)
 
 
@@ -161,6 +159,7 @@ Questions?
 ----------
 
 Questions/Changes are most welcome; just report an issue.
+
 
 Steve
 --

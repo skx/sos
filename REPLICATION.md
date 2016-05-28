@@ -68,7 +68,7 @@ If you wish to have five replicas of all uploaded objects the principle is the s
 Triggering Replication
 ----------------------
 
-Replication is not triggered automatically, although in the future that is an ideal ehancement.
+Replication is not triggered automatically, although in the future that is an ideal enhancement.
 
 To trigger replication you must run the replication script manually:
 

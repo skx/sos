@@ -2,11 +2,11 @@
 API
 ---
 
-There are two APIs we present, one from each deamon:
+There are two APIs we present, one from each daemon:
 
-* sos-server
-   * This is the public-facing API which allows objects to be uploaded / downloaded
-* blob-server
+* `sos-server`
+   * This is the public-facing API which allows objects to be uploaded & downloaded
+* `blob-server`
    * This is an implementation-detail.
 
 
@@ -25,7 +25,7 @@ The blob-server is designed to store "data" with an "id".  The data may be any b
 
 > GET /blob/${id}
 
-* Retrieve the data associated with the speciifed ID, if it exists.
+* Retrieve the data associated with the specified ID, if it exists.
 * Return `HTTP 404` in the event of an ID not being found.
 
 > HEAD /blob/${id}

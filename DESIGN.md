@@ -31,7 +31,7 @@ An upload operation involves:
 * If every `blob-server` has been contacted, and the upload failed, then we return an HTTP 500 error-code to the caller.
 
 
-Downlown Operation
+Download Operation
 ------------------
 
 A download operation is similar to an upload:
