@@ -72,4 +72,4 @@ Replication is not triggered automatically, although in the future that is an id
 
 To trigger replication you must run the replication script manually:
 
-    ./bin/replicate -v
+    $ sos-replicator -verbose

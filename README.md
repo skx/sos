@@ -30,11 +30,11 @@ If you prefer to build manually:
 
 Once built you'll find three binaries:
 
-| Path          | Purpose                                    |
-|---------------|--------------------------------------------|
-| bin/replicate | The Perl based replication utility.        |
-| sos-server    | The public-facing upload/download service. |
-| blob-server   | The blob-server used for storing content.  |
+| Path           | Purpose                                        |
+|----------------|------------------------------------------------|
+| blob-server    | The blob-server used for storing content.      |
+| sos-server     | The public-facing upload/download service.     |
+| sos-replicator | The replication utility, that mirrors content. |
 
 
 
@@ -42,12 +42,12 @@ Once built you'll find three binaries:
 Quick Start
 -----------
 
-In an ideal deployment at least two servers would be used:
+In an ideal deployment at least two hosts would be used:
 
-* One server would run the `sos-server`, which allows uploads to be made, and later retrieved.
-* Each of the two servers would run a `blob-server`, allowing an object to be replicated upon both hosts.
+* One host would run the `sos-server`, which allows uploads to be made, and later retrieved.
+* Each of the two hosts would also run a `blob-server`, allowing any uploaded objects to be replicated.
 
-We can simulate this upon a single host though, for the purposes of testing.  You'll just need to make sure you have four terminals open to run the appropriate daemons.
+We can simulate this upon a single host though for the purposes of testing.  You'll just need to make sure you have four terminals open to run the appropriate daemons.
 
 First of all you'll want to launch a pair of blob-servers:
 
@@ -58,7 +58,7 @@ First of all you'll want to launch a pair of blob-servers:
 
 In production usage you'd generally record the names of the blob-servers in a configuration file, either `/etc/sos.conf`, or `~/.sos.conf`, however they may also be specified upon the command line.
 
-We start the `sos-server` ensuring that it knows about the blob-servers to store content in:
+We'll then start the `sos-server` ensuring that it knows about the blob-servers to store content in:
 
     $ sos-server -blob-server http://localhost:4001,http://localhost:4002
     Launching API-server
@@ -87,7 +87,7 @@ If all goes well you'll receive a JSON-response as shown, and you can use the ID
 
 At the point you run the upload the contents will only be present on one of the blob-servers, chosen at random.  To ensure your data is replicated you need to (regularly) launch the replication utility:
 
-    $ ./bin/replicate --verbose
+    $ sos-replicate -verbose
 
 
 
