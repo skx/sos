@@ -74,20 +74,66 @@ func HasObject(server string, object string) bool {
 //
 // Mirror the given object.
 //
-func MirrorObject(src string, dst string, obj string) {
-	// NOP
+func MirrorObject(src string, dst string, obj string) bool {
+
 	if *verbose {
-		fmt.Printf("\t\tMirroring %s from %s to %s\n",
-			obj, src, dst)
+		fmt.Printf("\t\tMirroring %s from %s to %s\n", obj, src, dst)
 	}
 
 	//
-	// Download the object - keeping all headers with X-prefix
+	// Prepare to download the object.
 	//
+	src_url := fmt.Sprintf("%s%s%s", src, "/blob/", obj)
+	fmt.Printf("\tFetching :%s\n", src_url)
+
+	response, err := http.Get(src_url)
 
 	//
-	// Upload the object - making sure we recycle the headers.
+	// If there was an error we're done.
 	//
+	if err != nil {
+		fmt.Printf("Error fetching %s from %s%s%s\n",
+			obj, src, "/blob/", obj)
+		return false
+	}
+
+	//
+	// Prepare to POST the body we've downloaded to
+	// the mirror-location
+	//
+	dst_url := fmt.Sprintf("%s%s%s", dst, "/blob/", obj)
+	fmt.Printf("\tUploading :%s\n", dst_url)
+
+	//
+	// Build up a new request.
+	//
+	child, _ := http.NewRequest("POST", dst_url, response.Body)
+
+	//
+	// Copy any X-Header which was present
+	// in our download to the mirror.
+	//
+	for header, value := range response.Header {
+		if strings.HasPrefix(header, "X-") {
+			child.Header.Set(header, value[0])
+		}
+	}
+
+	//
+	// Send the request.
+	//
+	client := &http.Client{}
+	r, err := client.Do(child)
+
+	//
+	// If there was no error we're good.
+	//
+	if err != nil {
+		fmt.Printf("Error sending to %s - %s\n", dst_url, r.Body)
+		return false
+	}
+
+	return true
 }
 
 //
