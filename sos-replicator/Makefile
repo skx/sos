@@ -1,4 +1,4 @@
-default: sos-server
+default: sos-replicator
 
 clean:
 	go clean
@@ -6,5 +6,5 @@ clean:
 fmt:
 	go fmt *.go
 
-sos-server: $(wildcard *.go)
+sos-replicator: $(wildcard *.go)
 	go build .
