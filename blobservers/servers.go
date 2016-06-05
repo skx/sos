@@ -60,6 +60,41 @@ func Servers() []BlobServer {
 }
 
 //
+// Return the name of each group we have defined.
+//
+func Groups() []string {
+	groups := []string{}
+	for _, entry := range servers {
+		found := false
+		for _, a := range groups {
+			if entry.Group == a {
+				found = true
+			}
+		}
+		if found == false {
+			groups = append(groups, entry.Group)
+
+		}
+	}
+	return (groups)
+}
+
+//
+// Return the members of the given group
+//
+func GroupMembers(group string) []BlobServer {
+	ret := []BlobServer{}
+
+	for _, entry := range servers {
+		if entry.Group == group {
+			ret = append(ret, entry)
+		}
+	}
+	return (ret)
+
+}
+
+//
 // This returns a priority-ordered list of servers which will be used
 // for uploads/downloads.
 //
