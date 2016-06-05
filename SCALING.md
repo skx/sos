@@ -29,7 +29,7 @@ Configuring this deployment just requires you populate your list of servers in t
      http://node3.example.com:1234
      http://node4.example.com:1234
 
-**NOTE** Don't forget to schedule the `bin/replicate` script to ensure that you do indeed have replicas of your content!
+**NOTE** Don't forget to schedule the `sos-replicator` utility to ensure that you do indeed have replicas of your content!
 
 
 
