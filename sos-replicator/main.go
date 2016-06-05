@@ -157,6 +157,10 @@ func SyncGroup(servers []libconfig.BlobServer) {
 	//
 	objects := make(map[string][]string)
 
+	//
+	//  Store the list of objects each server hosts in the
+	// hash, keyed upon the server-location/name.
+	//
 	for _, s := range servers {
 		objects[s.Location] = Objects(s.Location)
 	}
@@ -169,10 +173,14 @@ func SyncGroup(servers []libconfig.BlobServer) {
 	//
 	for _, server := range servers {
 
+		//
 		// The objects on this server
+		//
 		var obs = objects[server.Location]
 
+		//
 		// For each object.
+		//
 		for _, i := range obs {
 
 			//
@@ -236,8 +244,6 @@ func main() {
 			fmt.Printf("\t% 10s - %s\n", entry.Group, entry.Location)
 		}
 	}
-
-	fmt.Println("TODO: Write a replication tool!")
 
 	//
 	// Get a list of groups.
