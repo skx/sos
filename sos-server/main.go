@@ -23,7 +23,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-	"../blobservers"
+	"github.com/skx/sos/blobservers"
 )
 
 /**
