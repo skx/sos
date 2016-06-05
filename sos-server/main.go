@@ -18,7 +18,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/gorilla/mux"
-	"github.com/skx/sos/blobservers"
+	"github.com/skx/sos/libconfig"
 	"io/ioutil"
 	"net/http"
 	"path/filepath"
@@ -85,7 +85,7 @@ func UploadHandler(res http.ResponseWriter, req *http.Request) {
 	// We try each blob-server in turn, and if/when we receive
 	// a successful result we'll return it to the caller.
 	//
-	for _, s := range blobservers.OrderedServers() {
+	for _, s := range libconfig.OrderedServers() {
 
 		//
 		// Replace the request body with the (second) copy we made.
@@ -184,7 +184,7 @@ func DownloadHandler(res http.ResponseWriter, req *http.Request) {
 	// We try each blob-server in turn, and if/when we receive
 	// a successfully result we'll return it to the caller.
 	//
-	for _, s := range blobservers.OrderedServers() {
+	for _, s := range libconfig.OrderedServers() {
 
 		//
 		// Build up a request, which is a HTTP-GET
@@ -259,14 +259,14 @@ func main() {
 	if (blob != nil) && (*blob != "") {
 		servers := strings.Split(*blob, ",")
 		for _, entry := range servers {
-			blobservers.AddServer("default", entry)
+			libconfig.AddServer("default", entry)
 		}
 	} else {
 
 		//
 		//  Initialize the servers from our config file(s).
 		//
-		blobservers.InitServers()
+		libconfig.InitServers()
 	}
 
 	//
@@ -274,7 +274,7 @@ func main() {
 	//
 	if *dump {
 		fmt.Printf("\t% 10s - %s\n", "group", "server")
-		for _, entry := range blobservers.Servers() {
+		for _, entry := range libconfig.Servers() {
 			fmt.Printf("\t% 10s - %s\n", entry.Group, entry.Location)
 		}
 		return
@@ -292,7 +292,7 @@ func main() {
 	//
 	fmt.Printf("\nBlob-servers:\n")
 	fmt.Printf("\t% 10s - %s\n", "group", "server")
-	for _, entry := range blobservers.Servers() {
+	for _, entry := range libconfig.Servers() {
 		fmt.Printf("\t% 10s - %s\n", entry.Group, entry.Location)
 	}
 	fmt.Printf("\n")

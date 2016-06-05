@@ -9,7 +9,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/skx/sos/blobservers"
+	"github.com/skx/sos/libconfig"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -139,7 +139,7 @@ func MirrorObject(src string, dst string, obj string) bool {
 //
 // Sync the members of the set we're given.
 //
-func SyncGroup(servers []blobservers.BlobServer) {
+func SyncGroup(servers []libconfig.BlobServer) {
 	//
 	// If we're being verbose show the members
 	//
@@ -217,14 +217,14 @@ func main() {
 	if (blob != nil) && (*blob != "") {
 		servers := strings.Split(*blob, ",")
 		for _, entry := range servers {
-			blobservers.AddServer("default", entry)
+			libconfig.AddServer("default", entry)
 		}
 	} else {
 
 		//
 		//  Initialize the servers from our config file(s).
 		//
-		blobservers.InitServers()
+		libconfig.InitServers()
 	}
 
 	//
@@ -232,7 +232,7 @@ func main() {
 	//
 	if *verbose {
 		fmt.Printf("\t% 10s - %s\n", "group", "server")
-		for _, entry := range blobservers.Servers() {
+		for _, entry := range libconfig.Servers() {
 			fmt.Printf("\t% 10s - %s\n", entry.Group, entry.Location)
 		}
 	}
@@ -242,7 +242,7 @@ func main() {
 	//
 	// Get a list of groups.
 	//
-	for _, entry := range blobservers.Groups() {
+	for _, entry := range libconfig.Groups() {
 
 		if *verbose {
 			fmt.Printf("Syncing group: %s\n", entry)
@@ -251,6 +251,6 @@ func main() {
 		//
 		// For each group, get the members, and sync them.
 		//
-		SyncGroup(blobservers.GroupMembers(entry))
+		SyncGroup(libconfig.GroupMembers(entry))
 	}
 }
