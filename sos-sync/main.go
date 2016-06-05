@@ -19,6 +19,39 @@ import (
 var verbose *bool
 
 //
+// Get the objects on the given server
+//
+func Objects(server string) []string {
+	type list_strings []string
+	var tmp list_strings
+
+	//
+	// Make the request to get the list of objects.
+	//
+	response, err := http.Get(server + "/blobs")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	//
+	// Read the (JSON) response-body.
+	//
+	body, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	//
+	// Decode into an array of strings, and return it.
+	//
+	err = json.Unmarshal(body, &tmp)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return tmp
+}
+
+//
 // Does the given server contain the given object?
 //
 func HasObject(server string, object string) bool {
@@ -47,6 +80,14 @@ func MirrorObject(src string, dst string, obj string) {
 		fmt.Printf("\t\tMirroring %s from %s to %s\n",
 			obj, src, dst)
 	}
+
+	//
+	// Download the object - keeping all headers with X-prefix
+	//
+
+	//
+	// Upload the object - making sure we recycle the headers.
+	//
 }
 
 //
@@ -71,29 +112,7 @@ func SyncGroup(servers []blobservers.BlobServer) {
 	objects := make(map[string][]string)
 
 	for _, s := range servers {
-		type list_strings []string
-		var tmp list_strings
-
-		file, err := ioutil.ReadFile("test.json")
-		if err != nil {
-			log.Fatal(err)
-		}
-		err = json.Unmarshal(file, &tmp)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		//
-		// OK we have a string-array - we'll add that
-		// to our list.
-		//
-		for _, i := range tmp {
-
-			if *verbose {
-				fmt.Printf("\tServer %s has %s\n", s.Location, i)
-			}
-			objects[s.Location] = append(objects[s.Location], i)
-		}
+		objects[s.Location] = Objects(s.Location)
 	}
 
 	//
