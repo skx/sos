@@ -23,6 +23,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"../blobservers"
 )
 
 /**
@@ -84,7 +85,7 @@ func UploadHandler(res http.ResponseWriter, req *http.Request) {
 	// We try each blob-server in turn, and if/when we receive
 	// a successful result we'll return it to the caller.
 	//
-	for _, s := range OrderedServers() {
+	for _, s := range blobservers.OrderedServers() {
 
 		//
 		// Replace the request body with the (second) copy we made.
@@ -95,7 +96,7 @@ func UploadHandler(res http.ResponseWriter, req *http.Request) {
 		//
 		// This is where we'll POST to.
 		//
-		url := fmt.Sprintf("%s%s%x", s.location, "/blob/", hash)
+		url := fmt.Sprintf("%s%s%x", s.Location, "/blob/", hash)
 
 		//
 		// Build up a new request.
@@ -183,18 +184,18 @@ func DownloadHandler(res http.ResponseWriter, req *http.Request) {
 	// We try each blob-server in turn, and if/when we receive
 	// a successfully result we'll return it to the caller.
 	//
-	for _, s := range OrderedServers() {
+	for _, s := range blobservers.OrderedServers() {
 
 		//
 		// Build up a request, which is a HTTP-GET
 		//
-		response, err := http.Get(fmt.Sprintf("%s%s%s", s.location, "/blob/", id))
+		response, err := http.Get(fmt.Sprintf("%s%s%s", s.Location, "/blob/", id))
 		//
 		// If there was no error we're good.
 		//
 		if err != nil {
 			fmt.Printf("Error fetching %s from %s%s%s\n",
-				id, s.location, "/blob/", id)
+				id, s.Location, "/blob/", id)
 		} else {
 
 			//
@@ -258,14 +259,14 @@ func main() {
 	if (blob != nil) && (*blob != "") {
 		servers := strings.Split(*blob, ",")
 		for _, entry := range servers {
-			AddServer("default", entry)
+			blobservers.AddServer("default", entry)
 		}
 	} else {
 
 		//
 		//  Initialize the servers from our config file(s).
 		//
-		InitServers()
+		blobservers.InitServers()
 	}
 
 	//
@@ -273,8 +274,8 @@ func main() {
 	//
 	if *dump {
 		fmt.Printf("\t% 10s - %s\n", "group", "server")
-		for _, entry := range Servers() {
-			fmt.Printf("\t% 10s - %s\n", entry.group, entry.location)
+		for _, entry := range blobservers.Servers() {
+			fmt.Printf("\t% 10s - %s\n", entry.Group, entry.Location)
 		}
 		return
 	}
@@ -291,8 +292,8 @@ func main() {
 	//
 	fmt.Printf("\nBlob-servers:\n")
 	fmt.Printf("\t% 10s - %s\n", "group", "server")
-	for _, entry := range Servers() {
-		fmt.Printf("\t% 10s - %s\n", entry.group, entry.location)
+	for _, entry := range blobservers.Servers() {
+		fmt.Printf("\t% 10s - %s\n", entry.Group, entry.Location)
 	}
 	fmt.Printf("\n")
 
