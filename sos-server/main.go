@@ -18,12 +18,12 @@ import (
 	"flag"
 	"fmt"
 	"github.com/gorilla/mux"
+	"github.com/skx/sos/blobservers"
 	"io/ioutil"
 	"net/http"
 	"path/filepath"
 	"strings"
 	"sync"
-	"github.com/skx/sos/blobservers"
 )
 
 /**

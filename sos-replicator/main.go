@@ -6,10 +6,10 @@
 package main
 
 import (
-	"../blobservers"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/skx/sos/blobservers"
 	"io/ioutil"
 	"log"
 	"net/http"
