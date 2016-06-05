@@ -25,7 +25,7 @@
 // See `SCALING.md` for the rationale behind this setup.
 //
 
-package blobservers
+package libconfig
 
 import (
 	"bufio"
