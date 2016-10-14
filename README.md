@@ -115,15 +115,15 @@ For example uploading an image might look like this:
 
 Downloading will result in the headers being set:
 
-   $ curl -v http://localhost:9992/fetch/20b30df22469e6d7617c7da6a457d4e384945a06 >/dev/null
-   ..
-   < HTTP/1.1 200 OK
-   < X-Orig-Filename: steve.jpg
-   < Date: Fri, 27 May 2016 06:17:39 GMT
-   < Content-Type: image/jpeg
-   < Transfer-Encoding: chunked
-   <
-   { [data not shown]
+    $ curl -v http://localhost:9992/fetch/20b30df22469e6d7617c7da6a457d4e384945a06 >/dev/null
+    ..
+    < HTTP/1.1 200 OK
+    < X-Orig-Filename: steve.jpg
+    < Date: Fri, 27 May 2016 06:17:39 GMT
+    < Content-Type: image/jpeg
+    < Transfer-Encoding: chunked
+    <
+    { [data not shown]
 
 
 
