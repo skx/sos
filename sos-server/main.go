@@ -17,13 +17,15 @@ import (
 	"crypto/sha1"
 	"flag"
 	"fmt"
-	"github.com/gorilla/mux"
-	"github.com/skx/sos/libconfig"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"path/filepath"
 	"strings"
 	"sync"
+
+	"github.com/gorilla/mux"
+	"github.com/skx/sos/libconfig"
 )
 
 /**
@@ -219,7 +221,7 @@ func DownloadHandler(res http.ResponseWriter, req *http.Request) {
 				//
 				// Now send back the body.
 				//
-				fmt.Fprintf(res, string(body))
+				io.Copy(res, bytes.NewReader(body))
 				return
 			}
 		}
@@ -283,7 +285,7 @@ func main() {
 	//
 	// Otherwise show a banner, then launch the server-threads.
 	//
-	fmt.Printf("Launching API-server\n")
+	fmt.Printf("[Launching API-server]\n")
 	fmt.Printf("\nUpload service\nhttp://%s:%d/upload\n", *host, *uport)
 	fmt.Printf("\nDownload service\nhttp://%s:%d/fetch/:id\n", *host, *dport)
 

@@ -8,14 +8,17 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/gorilla/mux"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"regexp"
 	"strings"
+
+	"github.com/gorilla/mux"
 )
 
 //
@@ -124,7 +127,7 @@ func GetHandler(res http.ResponseWriter, req *http.Request) {
 				res.Header().Set(k, v)
 			}
 		}
-		fmt.Fprintf(res, string(*data))
+		io.Copy(res, bytes.NewReader(*data))
 	}
 }
 
