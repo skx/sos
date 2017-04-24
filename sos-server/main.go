@@ -238,6 +238,16 @@ func DownloadHandler(res http.ResponseWriter, req *http.Request) {
 	fmt.Fprintf(res, "Object not found.")
 }
 
+
+//
+// Fallback handler, returns 404 for all requests.
+//
+func MissingHandler(res http.ResponseWriter, req *http.Request) {
+	res.WriteHeader(http.StatusNotFound)
+	fmt.Fprintf(res, "Invalid method or location.")
+}
+
+
 /**
  * Entry point to our code.
  */
@@ -305,12 +315,14 @@ func main() {
 	//
 	up_router := mux.NewRouter()
 	up_router.HandleFunc("/upload", UploadHandler).Methods("POST")
+	up_router.PathPrefix("/").HandlerFunc(MissingHandler)
 
 	//
 	// Create a route for downloading.
 	//
 	down_router := mux.NewRouter()
 	down_router.HandleFunc("/fetch/{id}", DownloadHandler).Methods("GET")
+	down_router.PathPrefix("/").HandlerFunc(MissingHandler)
 
 	//
 	// The following code is a hack to allow us to run two distinct
