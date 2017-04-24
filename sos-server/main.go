@@ -144,7 +144,8 @@ func UploadHandler(res http.ResponseWriter, req *http.Request) {
 	//
 	// Let the caller know.
 	//
-	fmt.Fprintf(res, "Upload FAILED")
+	res.WriteHeader(http.StatusInternalServerError)
+	fmt.Fprintf(res, "{\"error\":\"upload failed\"}")
 	return
 
 }
