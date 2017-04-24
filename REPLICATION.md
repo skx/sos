@@ -23,17 +23,20 @@ Replication is implemented in terms of groups, which are defined in the configur
     -: http://node3-2.example.com:3000
     -: http://node3-3.example.com:3000
 
-Replication is carried out __exclusively__ between members of the same group:
+Replication is carried out __exclusively__ between members of the same group, so in the first group above we have this:
 
 * Data from `http://node1.example.com:3000` is replicated
-   * To `http://node1-1.example.com:3000`.
    * To `http://node1-2.example.com:3000`.
-* Data from `http://node1-1.example.com:3000` is replicated
-   * To `http://node1.example.com:3000`.
    * To `http://node1-3.example.com:3000`.
 * Data from `http://node1-2.example.com:3000` is replicated
    * To `http://node1.example.com:3000`.
-   * To `http://node1-1.example.com:3000`.
+   * To `http://node1-3.example.com:3000`.
+* Data from `http://node1-3.example.com:3000` is replicated
+   * To `http://node1.example.com:3000`.
+   * To `http://node1-3.example.com:3000`.
+
+Similarly the second-group replicate between themselves, and the third-group
+replicats between the members in that group.
 
 There is __zero__ replication between nodes in different groups.
 
@@ -68,8 +71,6 @@ If you wish to have five replicas of all uploaded objects the principle is the s
 Triggering Replication
 ----------------------
 
-Replication is not triggered automatically, although in the future that is an ideal enhancement.
-
-To trigger replication you must run the replication script manually:
+Replication is __not__ triggered automatically, although in the future that is an ideal enhancement, to trigger replication you must run the replication script manually:
 
     $ sos-replicator -verbose
