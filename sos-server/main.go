@@ -238,7 +238,6 @@ func DownloadHandler(res http.ResponseWriter, req *http.Request) {
 	fmt.Fprintf(res, "Object not found.")
 }
 
-
 //
 // Fallback handler, returns 404 for all requests.
 //
@@ -246,7 +245,6 @@ func MissingHandler(res http.ResponseWriter, req *http.Request) {
 	res.WriteHeader(http.StatusNotFound)
 	fmt.Fprintf(res, "Invalid method or location.")
 }
-
 
 /**
  * Entry point to our code.
