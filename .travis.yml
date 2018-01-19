@@ -1,0 +1,23 @@
+language: go
+sudo: false
+
+matrix:
+  include:
+    - go: tip
+  allow_failures:
+    - go: tip
+
+script:
+    - go get -t -v -d $(go list ./...)
+    - go build -ldflags "-X main.version=$(git describe --tags)" .
+    - go get golang.org/x/tools/cmd/cover
+    - go test -coverprofile fmt
+
+deploy:
+  provider: releases
+  api_key:
+    secure: C0fbMukaIVVtqHSPUgMX74Ki1rcRPF3WDzB6cd4mJptjbAnwmYgaHS9WxjjIjfqCXc57RRwzXE/r91x+hz/SuD1DvN6ngyzrMBO4MYRRnudfexI+1QQiSMGO7xX/QUpOG+bq9dlCuEg7+z1hfpKpARvrnivWccPeaLigvEiWiA603Nl+/ZEy7VXW9oheuA16xappAy0U+lrV33ovWqIVarmmt7tDC3Q+ZPUwPjjC8ecMwbduogw/OFVVOR0Qwsuqg8cAi7QKvHV6LVoKHp8GoC2NqDHSk6iOTtmL8s8J6gefD57Y3YFRShMxIVwpOYxSRsxqIKej+0LYY9oEC6Ct/ZJTnc0fPEZLM6VR85iYCfCcr9Xw56lscA5bPVFeoTvlIYhxdSQzpqaqx25n8mpONgnUE8tFINqHP0gnBrJhcxCcUzTM0aCxPousgywjxv7nWMrO+rdOF7qWxTUca7SX3yiOi3GlmPEiE0JIKYrlLbrKPZwQC1LhOxu4sQQJmlDwg6cgdAWSayHVlRTQT5WwmfeHzAg+cjH6DIzUZuKfenvG7kRHEFA4c/9G8vFGluONp5k8Sw4wLNG3ku0gzxRDLx6k7fWwo7XpVaFQHjcW8x3VAHzeFnRVcjDG1J5VCJQ/d5O6P6q008u43SeH0B1waxd6Fj1XtorS9RRWVCCTIds=
+  file: puppet-summary
+  skip_cleanup: true
+  on:
+    tags: true
