@@ -53,11 +53,11 @@ func (*apiServerCmd) Usage() string {
 // Flag setup
 //
 func (p *apiServerCmd) SetFlags(f *flag.FlagSet) {
-	flag.StringVar(&p.host, "host", "0.0.0.0", "The IP to listen upon.")
-	flag.StringVar(&p.blob, "blob-server", "", "Comma-separated list of blob-servers to contact.")
-	flag.IntVar(&p.dport, "download-port", 9992, "The port to bind upon for downloading objects.")
-	flag.IntVar(&p.uport, "upload-port", 9991, "The port to bind upon for uploading objects.")
-	flag.BoolVar(&p.dump,"dump", false, "Dump configuration and exit?.")
+	f.StringVar(&p.host, "api-host", "0.0.0.0", "The IP to listen upon.")
+	f.StringVar(&p.blob, "blob-server", "", "Comma-separated list of blob-servers to contact.")
+	f.IntVar(&p.dport, "download-port", 9992, "The port to bind upon for downloading objects.")
+	f.IntVar(&p.uport, "upload-port", 9991, "The port to bind upon for uploading objects.")
+	f.BoolVar(&p.dump,"dump", false, "Dump configuration and exit?.")
 }
 
 //
