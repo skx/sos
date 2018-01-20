@@ -8,7 +8,7 @@ Simple Object Storage, in golang
 
 The Simple Object Storage (SOS) is a HTTP-based object-storage system which allows files to be uploaded, and later retrieved by ID.
 
-Files can be replicated across a number of hosts to ensure redundancy, and increase availability in the event of hardware failure.
+Files can be replicated across a number of hosts to ensure redundancy, and increased availability in the event of hardware failure.
 
 * [The design of the system](DESIGN.md).
 * [Scaling to large numbers of objects](SCALING.md).
@@ -33,15 +33,31 @@ If you prefer to build manually:
      $ cd sos
      $ make
 
-Once built you'll find three binaries:
-
-| Path           | Purpose                                        |
-|----------------|------------------------------------------------|
-| blob-server    | The blob-server used for storing content.      |
-| sos-server     | The public-facing upload/download service.     |
-| sos-replicator | The replication utility, that mirrors content. |
+Once built you'll find a single binary `sos`, which implements a number
+of sub-commands to provide various pieces of functionality.
 
 
+
+Overview
+--------
+
+You can read the [design overview](DESIGN.md) for more details, but the
+SOS server relies upon the primitive of a "blob server" - which is a very
+dumb service which provides three simple operations:
+
+* Store a particular chunk of binary data with a specific name.
+* Given a name retrieve the chunk of binary data associated with it.
+* Return a list of all known names.
+
+The public API is built upon the top of that primitive, and both are
+launched via the same command:
+
+     $ ./sos blob-server ...
+     $ ./sos api-server ...
+
+Here the first command launches a blob-server, which is the back-end for
+storage, and the second command launches the public API server - which is
+what your code/users should operate against.
 
 
 Quick Start
@@ -49,23 +65,26 @@ Quick Start
 
 In an ideal deployment at least two hosts would be used:
 
-* One host would run the `sos-server`, which allows uploads to be made, and later retrieved.
-* Each of the two hosts would also run a `blob-server`, allowing any uploaded objects to be replicated.
+* One host would run the public-server
+   * This allows uploads to be made, and later retrieved.
+* Each of the two hosts would also run a blob-server
+   * The blob-servers provide the actual storage of the upload-objects
+   * The contents of these are replicated out of band.
 
 We can simulate this upon a single host though for the purposes of testing.  You'll just need to make sure you have four terminals open to run the appropriate daemons.
 
 First of all you'll want to launch a pair of blob-servers:
 
-    $ blob-server -store data1 -port 4001
-    $ blob-server -store data2 -port 4002
+    $ sos blob-server -store data1 -port 4001
+    $ sos blob-server -store data2 -port 4002
 
 > **NOTE**: The storage-paths (`./data1` and `./data2` in the example above) is where the uploaded-content will be stored.  These directories will be created if missing.
 
 In production usage you'd generally record the names of the blob-servers in a configuration file, either `/etc/sos.conf`, or `~/.sos.conf`, however they may also be specified upon the command line.
 
-We'll then start the `sos-server` ensuring that it knows about the blob-servers to store content in:
+We'll then start the public/API-server ensuring that it knows about the blob-servers to store content in:
 
-    $ sos-server -blob-server http://localhost:4001,http://localhost:4002
+    $ sos api-server -blob-server http://localhost:4001,http://localhost:4002
     Launching API-server
     ..
 
@@ -92,7 +111,7 @@ If all goes well you'll receive a JSON-response as shown, and you can use the ID
 
 At the point you run the upload the contents will only be present on one of the blob-servers, chosen at random.  To ensure your data is replicated you need to (regularly) launch the replication utility:
 
-    $ sos-replicator -blob-server http://localhost:4001,http://localhost:4002
+    $ ./sos replicate -blob-server http://localhost:4001,http://localhost:4002
            group - server
          default - http://127.0.0.1:3001
          default - http://127.0.0.1:3002
