@@ -1,7 +1,7 @@
-/*
- * main.go - Syncing utility.
- *
- */
+//
+// Replicate objects between available blob-servers.
+//
+
 
 package main
 
@@ -18,6 +18,10 @@ import (
 	"github.com/google/subcommands"
 )
 
+
+//
+// The command-line options that this sub-command understands.
+//
 type replicateCmd struct {
 	blob string
 	verbose bool
@@ -34,6 +38,7 @@ func (*replicateCmd) Usage() string {
 `
 }
 
+
 //
 // Flag setup
 //
@@ -44,7 +49,7 @@ func (p *replicateCmd) SetFlags(f *flag.FlagSet) {
 
 
 //
-// Entry-point.
+// Entry-point - invoke the main replication-routine.
 //
 func (p *replicateCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
 
@@ -239,9 +244,10 @@ func SyncGroup(servers []libconfig.BlobServer, options replicateCmd) {
 	}
 }
 
-/**
- * Entry point to our code.
- */
+
+//
+// This is where the main-work happens.
+//
 func replicate(options replicateCmd) {
 
 	//

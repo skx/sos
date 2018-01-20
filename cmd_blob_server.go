@@ -52,16 +52,17 @@ func (p *blobServerCmd) SetFlags(f *flag.FlagSet) {
 //
 var STORAGE StorageHandler
 
-/**
-* Called via GET /alive
- */
+//
+// Called via GET /alive
+//
 func HealthHandler(res http.ResponseWriter, req *http.Request) {
 	fmt.Fprintf(res, "alive")
 }
 
-/**
- * Called via GET /blob/XXXXXX
- */
+
+//
+// Called via GET /blob/XXXXXX
+//
 func GetHandler(res http.ResponseWriter, req *http.Request) {
 	var (
 		status int
@@ -148,17 +149,17 @@ func GetHandler(res http.ResponseWriter, req *http.Request) {
 	}
 }
 
-/**
- * Fallback handler, returns 404 for all requests.
- */
+//
+// Fallback handler, returns 404 for all requests.
+//
 func MissingHandler(res http.ResponseWriter, req *http.Request) {
 	res.WriteHeader(http.StatusNotFound)
 	fmt.Fprintf(res, "404 - content is not hosted here.")
 }
 
-/**
- * List the IDs of all blobs we know about.
- */
+//
+// List the IDs of all blobs we know about.
+//
 func ListHandler(res http.ResponseWriter, req *http.Request) {
 
 	var list []string
@@ -177,9 +178,9 @@ func ListHandler(res http.ResponseWriter, req *http.Request) {
 	}
 }
 
-/**
- * Upload a file to to the public-root.
- */
+//
+// Upload a file to to the public-root.
+//
 func UploadHandler(res http.ResponseWriter, req *http.Request) {
 	var (
 		status int

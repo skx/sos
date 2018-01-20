@@ -1,5 +1,5 @@
 //
-// Entry-point to the puppet-summary service.
+// Entry-point to the simple-object-storage service.
 //
 
 package main
@@ -16,7 +16,7 @@ import (
 //
 func main() {
 	subcommands.Register(subcommands.HelpCommand(), "")
-	//subcommands.Register(subcommands.FlagsCommand(), "")
+	subcommands.Register(subcommands.FlagsCommand(), "")
 	subcommands.Register(subcommands.CommandsCommand(), "")
 
 	subcommands.Register(&apiServerCmd{}, "")

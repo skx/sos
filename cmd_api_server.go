@@ -1,14 +1,6 @@
-/*
- * main.go - API Server
- *
- * Trivial rewrite of the api-server in #golang.
- *
- * Presents two end-points, on two different ports:
- *
- *    http://127.0.0.1:9991/upload
- *
- *    http://127.0.0.1:9992/fetch/:id
- */
+//
+// Launch our API-server.
+//
 
 package main
 
@@ -30,6 +22,10 @@ import (
 	"github.com/google/subcommands"
 )
 
+
+//
+// Options which may be set via flags.
+//
 type apiServerCmd struct {
 	host string
 	blob  string
@@ -61,7 +57,7 @@ func (p *apiServerCmd) SetFlags(f *flag.FlagSet) {
 }
 
 //
-// Entry-point.
+// Entry-point - pass control to the API-server setup function.
 //
 func (p *apiServerCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
 
@@ -71,7 +67,7 @@ func (p *apiServerCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interfac
 
 
 //
-// Entry point.
+// Start the upload/download servers running.
 //
 func api_server(options apiServerCmd) {
 
@@ -166,16 +162,16 @@ func api_server(options apiServerCmd) {
 
 
 
-/**
- * This is a helper for allowing us to consume a HTTP-body more than once.
- */
+//
+// This is a helper for allowing us to consume a HTTP-body more than once.
+///
 type myReader struct {
 	*bytes.Buffer
 }
 
-/**
- * So that it implements the io.ReadCloser interface
- */
+//
+// So that it implements the io.ReadCloser interface
+//
 func (m myReader) Close() error { return nil }
 
 //
