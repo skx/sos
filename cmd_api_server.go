@@ -7,62 +7,16 @@ package main
 import (
 	"bytes"
 	"crypto/sha1"
-	"flag"
 	"fmt"
+	"github.com/gorilla/mux"
+	"github.com/skx/sos/libconfig"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"path/filepath"
 	"strings"
 	"sync"
-
-	"context"
-	"github.com/google/subcommands"
-	"github.com/gorilla/mux"
-	"github.com/skx/sos/libconfig"
 )
-
-//
-// Options which may be set via flags.
-//
-type apiServerCmd struct {
-	host  string
-	blob  string
-	dport int
-	uport int
-	dump  bool
-}
-
-//
-// Glue
-//
-func (*apiServerCmd) Name() string     { return "api-server" }
-func (*apiServerCmd) Synopsis() string { return "Launch an API-server." }
-func (*apiServerCmd) Usage() string {
-	return `API-server :
-  Launch an API-server to handle the upload/download of objects.
-`
-}
-
-//
-// Flag setup
-//
-func (p *apiServerCmd) SetFlags(f *flag.FlagSet) {
-	f.StringVar(&p.host, "api-host", "0.0.0.0", "The IP to listen upon.")
-	f.StringVar(&p.blob, "blob-server", "", "Comma-separated list of blob-servers to contact.")
-	f.IntVar(&p.dport, "download-port", 9992, "The port to bind upon for downloading objects.")
-	f.IntVar(&p.uport, "upload-port", 9991, "The port to bind upon for uploading objects.")
-	f.BoolVar(&p.dump, "dump", false, "Dump configuration and exit?.")
-}
-
-//
-// Entry-point - pass control to the API-server setup function.
-//
-func (p *apiServerCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
-
-	api_server(*p)
-	return subcommands.ExitSuccess
-}
 
 //
 // Start the upload/download servers running.

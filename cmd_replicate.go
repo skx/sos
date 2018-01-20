@@ -5,53 +5,14 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
-	"flag"
 	"fmt"
-	"github.com/google/subcommands"
 	"github.com/skx/sos/libconfig"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"strings"
 )
-
-//
-// The command-line options that this sub-command understands.
-//
-type replicateCmd struct {
-	blob    string
-	verbose bool
-}
-
-//
-// Glue
-//
-func (*replicateCmd) Name() string     { return "replicate" }
-func (*replicateCmd) Synopsis() string { return "Trigger replication." }
-func (*replicateCmd) Usage() string {
-	return `replication :
-  Trigger a single run of the replication/balancing operation.
-`
-}
-
-//
-// Flag setup
-//
-func (p *replicateCmd) SetFlags(f *flag.FlagSet) {
-	f.StringVar(&p.blob, "blob-server", "", "Comma-separated list of blob-servers to contact.")
-	f.BoolVar(&p.verbose, "verbose", false, "Be more verbose?")
-}
-
-//
-// Entry-point - invoke the main replication-routine.
-//
-func (p *replicateCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
-
-	replicate(*p)
-	return subcommands.ExitSuccess
-}
 
 //
 // Get the objects on the given server

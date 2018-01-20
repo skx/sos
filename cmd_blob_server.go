@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -16,36 +15,8 @@ import (
 	"regexp"
 	"strings"
 
-	"context"
-	"github.com/google/subcommands"
 	"github.com/gorilla/mux"
 )
-
-type blobServerCmd struct {
-	store string
-	port  int
-	host  string
-}
-
-//
-// Glue
-//
-func (*blobServerCmd) Name() string     { return "blob-server" }
-func (*blobServerCmd) Synopsis() string { return "Launch a blob-server." }
-func (*blobServerCmd) Usage() string {
-	return `blob-server :
-  Launch a blob-server to handle the back-end storage
-`
-}
-
-//
-// Flag setup
-//
-func (p *blobServerCmd) SetFlags(f *flag.FlagSet) {
-	f.StringVar(&p.host, "host", "127.0.0.1", "The IP to listen upon")
-	f.IntVar(&p.port, "port", 3001, "The port to bind upon")
-	f.StringVar(&p.store, "store", "data", "The location to write the data  to")
-}
 
 //
 //  The handle to our storage method
@@ -296,13 +267,4 @@ func blob_server(options blobServerCmd) {
 		panic(err)
 	}
 
-}
-
-//
-// Entry-point.
-//
-func (p *blobServerCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
-
-	blob_server(*p)
-	return subcommands.ExitSuccess
 }
