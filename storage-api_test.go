@@ -138,8 +138,8 @@ func TestGet(t *testing.T) {
 		string_content := fmt.Sprintf("%s", id)
 
 		if id != string_content {
-			t.Errorf("Content of '%s' was '%s' not '%s'",
-				id, content, id)
+			t.Errorf("Content of '%s' was not '%s'",
+				id, id)
 		}
 	}
 
