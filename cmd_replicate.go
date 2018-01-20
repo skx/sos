@@ -14,9 +14,44 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"context"
+	"github.com/google/subcommands"
 )
 
-var verbose *bool
+type replicateCmd struct {
+	blob string
+	verbose bool
+}
+
+//
+// Glue
+//
+func (*replicateCmd) Name() string     { return "replicate" }
+func (*replicateCmd) Synopsis() string { return "Trigger replication." }
+func (*replicateCmd) Usage() string {
+	return `replication :
+  Trigger a single run of the replication/balancing operation.
+`
+}
+
+//
+// Flag setup
+//
+func (p *replicateCmd) SetFlags(f *flag.FlagSet) {
+	f.StringVar(&p.blob, "blob-server", "", "Comma-separated list of blob-servers to contact.")
+	f.BoolVar(&p.verbose,"verbose", false, "Be more verbose?")
+}
+
+
+//
+// Entry-point.
+//
+func (p *replicateCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
+
+	replicate(*p)
+	return subcommands.ExitSuccess
+}
+
 
 //
 // Get the objects on the given server
@@ -74,9 +109,9 @@ func HasObject(server string, object string) bool {
 //
 // Mirror the given object.
 //
-func MirrorObject(src string, dst string, obj string) bool {
+func MirrorObject(src string, dst string, obj string, options replicateCmd) bool {
 
-	if *verbose {
+	if options.verbose {
 		fmt.Printf("\t\tMirroring %s from %s to %s\n", obj, src, dst)
 	}
 
@@ -139,11 +174,11 @@ func MirrorObject(src string, dst string, obj string) bool {
 //
 // Sync the members of the set we're given.
 //
-func SyncGroup(servers []libconfig.BlobServer) {
+func SyncGroup(servers []libconfig.BlobServer, options replicateCmd) {
 	//
 	// If we're being verbose show the members
 	//
-	if *verbose {
+	if options.verbose  {
 		for _, s := range servers {
 			fmt.Printf("\tGroup member: %s\n", s.Location)
 		}
@@ -195,7 +230,7 @@ func SyncGroup(servers []libconfig.BlobServer) {
 
 					// If the object is missing.
 					if !HasObject(mirror.Location, i) {
-						MirrorObject(server.Location, mirror.Location, i)
+						MirrorObject(server.Location, mirror.Location, i, options)
 					}
 				}
 
@@ -207,14 +242,7 @@ func SyncGroup(servers []libconfig.BlobServer) {
 /**
  * Entry point to our code.
  */
-func main() {
-
-	//
-	// Parse our command-line arguments.
-	//
-	blob := flag.String("blob-server", "", "Comma-separated list of blob-servers to contact.")
-	verbose = flag.Bool("verbose", false, "Be verbose?")
-	flag.Parse()
+func replicate(options replicateCmd) {
 
 	//
 	// If we received blob-servers on the command-line use them too.
@@ -222,8 +250,8 @@ func main() {
 	// NOTE: blob-servers added on the command-line are placed in the
 	// "default" group.
 	//
-	if (blob != nil) && (*blob != "") {
-		servers := strings.Split(*blob, ",")
+	if (options.blob != "") {
+		servers := strings.Split(options.blob, ",")
 		for _, entry := range servers {
 			libconfig.AddServer("default", entry)
 		}
@@ -238,7 +266,7 @@ func main() {
 	//
 	// Show the blob-servers.
 	//
-	if *verbose {
+	if options.verbose {
 		fmt.Printf("\t% 10s - %s\n", "group", "server")
 		for _, entry := range libconfig.Servers() {
 			fmt.Printf("\t% 10s - %s\n", entry.Group, entry.Location)
@@ -250,13 +278,13 @@ func main() {
 	//
 	for _, entry := range libconfig.Groups() {
 
-		if *verbose {
+		if options.verbose {
 			fmt.Printf("Syncing group: %s\n", entry)
 		}
 
 		//
 		// For each group, get the members, and sync them.
 		//
-		SyncGroup(libconfig.GroupMembers(entry))
+		SyncGroup(libconfig.GroupMembers(entry), options)
 	}
 }

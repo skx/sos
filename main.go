@@ -21,6 +21,7 @@ func main() {
 
 	subcommands.Register(&apiServerCmd{}, "")
 	subcommands.Register(&blobServerCmd{}, "")
+	subcommands.Register(&replicateCmd{}, "")
 	subcommands.Register(&versionCmd{}, "")
 
 	flag.Parse()
