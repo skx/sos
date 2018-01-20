@@ -59,7 +59,6 @@ func HealthHandler(res http.ResponseWriter, req *http.Request) {
 	fmt.Fprintf(res, "alive")
 }
 
-
 //
 // Called via GET /blob/XXXXXX
 //
@@ -288,14 +287,13 @@ func blob_server(options blobServerCmd) {
 	//
 	// Launch the server
 	//
-	fmt.Printf("Launching the server on http://%s:%d\n", options.host, options.port)
+	fmt.Printf("blob-server available at http://%s:%d/\nUploads will be written beneath: %s\n",
+		options.host, options.port, options.store)
 	err := http.ListenAndServe(fmt.Sprintf("%s:%d", options.host, options.port), nil)
 	if err != nil {
 		panic(err)
 	}
 
-	fmt.Printf("Launching on %s:%d - Storage at %s\n",
-		options.host, options.port, options.store)
 }
 
 //

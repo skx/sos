@@ -2,28 +2,26 @@
 // Replicate objects between available blob-servers.
 //
 
-
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/google/subcommands"
 	"github.com/skx/sos/libconfig"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"strings"
-	"context"
-	"github.com/google/subcommands"
 )
-
 
 //
 // The command-line options that this sub-command understands.
 //
 type replicateCmd struct {
-	blob string
+	blob    string
 	verbose bool
 }
 
@@ -38,15 +36,13 @@ func (*replicateCmd) Usage() string {
 `
 }
 
-
 //
 // Flag setup
 //
 func (p *replicateCmd) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&p.blob, "blob-server", "", "Comma-separated list of blob-servers to contact.")
-	f.BoolVar(&p.verbose,"verbose", false, "Be more verbose?")
+	f.BoolVar(&p.verbose, "verbose", false, "Be more verbose?")
 }
-
 
 //
 // Entry-point - invoke the main replication-routine.
@@ -56,7 +52,6 @@ func (p *replicateCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interfac
 	replicate(*p)
 	return subcommands.ExitSuccess
 }
-
 
 //
 // Get the objects on the given server
@@ -183,7 +178,7 @@ func SyncGroup(servers []libconfig.BlobServer, options replicateCmd) {
 	//
 	// If we're being verbose show the members
 	//
-	if options.verbose  {
+	if options.verbose {
 		for _, s := range servers {
 			fmt.Printf("\tGroup member: %s\n", s.Location)
 		}
@@ -244,7 +239,6 @@ func SyncGroup(servers []libconfig.BlobServer, options replicateCmd) {
 	}
 }
 
-
 //
 // This is where the main-work happens.
 //
@@ -256,7 +250,7 @@ func replicate(options replicateCmd) {
 	// NOTE: blob-servers added on the command-line are placed in the
 	// "default" group.
 	//
-	if (options.blob != "") {
+	if options.blob != "" {
 		servers := strings.Split(options.blob, ",")
 		for _, entry := range servers {
 			libconfig.AddServer("default", entry)

@@ -88,6 +88,80 @@ func TestHealth(t *testing.T) {
 }
 
 //
+// Test HEAD access to a file before/after it is created.
+//
+func TestHeadAccess(t *testing.T) {
+
+	//
+	// Create a temporary directory.
+	//
+	p, _ := ioutil.TempDir(os.TempDir(), "prefix")
+
+	//
+	// Init the filesystem storage-class - defined in `cmd_blob_server.go`
+	//
+	STORAGE = new(FilesystemStorage)
+	STORAGE.Setup(p)
+
+	router := mux.NewRouter()
+	router.HandleFunc("/blob/{id}/", GetHandler).Methods("HEAD")
+	router.HandleFunc("/blob/{id}", GetHandler).Methods("HEAD")
+
+	//
+	// Table driven test - each of these should fail as the matching
+	// file is not present.
+	//
+	ids := []string{"/blob/foo", "/blob/foo/"}
+
+	for _, id := range ids {
+
+		req, err := http.NewRequest("HEAD", id, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		rr := httptest.NewRecorder()
+		router.ServeHTTP(rr, req)
+
+		// Check the status code is what we expect.
+		if status := rr.Code; status != http.StatusNotFound {
+			t.Errorf("Unexpected status-code: %v", status)
+		}
+	}
+
+	//
+	// Now create the file `foo`.
+	//
+	path := filepath.Join(p, "foo")
+	content := []byte("Content")
+	ioutil.WriteFile(path, content, 0644)
+
+	//
+	// And repeat the accesses - we should have success now.
+	//
+	for _, id := range ids {
+
+		req, err := http.NewRequest("HEAD", id, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		rr := httptest.NewRecorder()
+		router.ServeHTTP(rr, req)
+
+		// Check the status code is what we expect.
+		if status := rr.Code; status != http.StatusOK {
+			t.Errorf("Unexpected status-code: %v", status)
+		}
+	}
+
+	//
+	// Cleanup the storage-point
+	//
+	os.RemoveAll(p)
+}
+
+//
 // Test that retrieving a missing blob fails appropriately.
 //
 func TestMissingBlob(t *testing.T) {

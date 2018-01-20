@@ -16,22 +16,21 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/gorilla/mux"
-	"github.com/skx/sos/libconfig"
 	"context"
 	"github.com/google/subcommands"
+	"github.com/gorilla/mux"
+	"github.com/skx/sos/libconfig"
 )
-
 
 //
 // Options which may be set via flags.
 //
 type apiServerCmd struct {
-	host string
+	host  string
 	blob  string
-	dport  int
-	uport  int
-	dump bool
+	dport int
+	uport int
+	dump  bool
 }
 
 //
@@ -53,7 +52,7 @@ func (p *apiServerCmd) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&p.blob, "blob-server", "", "Comma-separated list of blob-servers to contact.")
 	f.IntVar(&p.dport, "download-port", 9992, "The port to bind upon for downloading objects.")
 	f.IntVar(&p.uport, "upload-port", 9991, "The port to bind upon for uploading objects.")
-	f.BoolVar(&p.dump,"dump", false, "Dump configuration and exit?.")
+	f.BoolVar(&p.dump, "dump", false, "Dump configuration and exit?.")
 }
 
 //
@@ -64,7 +63,6 @@ func (p *apiServerCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interfac
 	api_server(*p)
 	return subcommands.ExitSuccess
 }
-
 
 //
 // Start the upload/download servers running.
@@ -77,7 +75,7 @@ func api_server(options apiServerCmd) {
 	// NOTE: blob-servers added on the command-line are placed in the
 	// "default" group.
 	//
-	if (options.blob != "") {
+	if options.blob != "" {
 		servers := strings.Split(options.blob, ",")
 		for _, entry := range servers {
 			libconfig.AddServer("default", entry)
@@ -159,8 +157,6 @@ func api_server(options apiServerCmd) {
 	}()
 	wg.Wait()
 }
-
-
 
 //
 // This is a helper for allowing us to consume a HTTP-body more than once.
@@ -371,7 +367,6 @@ func APIDownloadHandler(res http.ResponseWriter, req *http.Request) {
 	res.WriteHeader(http.StatusNotFound)
 	fmt.Fprintf(res, "Object not found.")
 }
-
 
 //
 // Fallback handler, returns 404 for all requests.
