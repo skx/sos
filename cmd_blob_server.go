@@ -218,6 +218,7 @@ func UploadHandler(res http.ResponseWriter, req *http.Request) {
 	//
 	content, err := ioutil.ReadAll(req.Body)
 	if err != nil {
+		err = errors.New("Failed to read body.")
 		status = http.StatusInternalServerError
 		return
 	}
@@ -240,6 +241,7 @@ func UploadHandler(res http.ResponseWriter, req *http.Request) {
 	//
 	result := STORAGE.Store(id, content, extras)
 	if result == false {
+		err = errors.New( "Failed to write to storage" )
 		status = http.StatusInternalServerError
 		return
 	}
