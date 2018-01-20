@@ -241,7 +241,7 @@ func UploadHandler(res http.ResponseWriter, req *http.Request) {
 	//
 	result := STORAGE.Store(id, content, extras)
 	if result == false {
-		err = errors.New( "Failed to write to storage" )
+		err = errors.New("Failed to write to storage")
 		status = http.StatusInternalServerError
 		return
 	}

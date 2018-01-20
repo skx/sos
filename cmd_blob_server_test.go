@@ -6,12 +6,14 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"github.com/gorilla/mux"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -301,6 +303,77 @@ func TestBlobList(t *testing.T) {
 //
 func TestBlobUpload(t *testing.T) {
 
+	//
+	// Create a temporary directory.
+	//
+	p, _ := ioutil.TempDir(os.TempDir(), "prefix")
+
+	//
+	// Init the filesystem storage-class - defined in `cmd_blob_server.go`
+	//
+	STORAGE = new(FilesystemStorage)
+	STORAGE.Setup(p)
+
+	//
+	// Prepare the handler
+	//
+	router := mux.NewRouter()
+	router.HandleFunc("/blob/{id}", UploadHandler).Methods("POST")
+
+	// Get the test-server
+	ts := httptest.NewServer(router)
+	defer ts.Close()
+
+	//
+	// The content we're going to upload
+	//
+	content := []byte("Content goes here, honest")
+
+	//
+	// Test a valid name
+	//
+	url := ts.URL + "/blob/123456"
+
+	resp, err := http.Post(url, url, bytes.NewReader(content))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+
+	if err != nil {
+		t.Errorf("Failed to read response-body %v\n", err)
+	}
+
+	//
+	// Test the upload succeeded.
+	//
+	if status := resp.StatusCode; status != http.StatusOK {
+		t.Errorf("Unexpected status-code: %v", status)
+	}
+
+	//
+	// Get the result.
+	//
+	result := fmt.Sprintf("%s", body)
+
+	if !strings.Contains(result, "\"status\":\"OK\"") {
+		t.Fatalf("Unexpected body: '%s'", result)
+	}
+
+	//
+	// Now the file should exist
+	//
+	if !STORAGE.Exists("123456") {
+		t.Errorf("Exists('123456') failed, post-upload!")
+	}
+
+	//
+	// Cleanup the storage-point
+	//
+	os.RemoveAll(p)
+
 }
 
 //
@@ -324,31 +397,40 @@ func TestBlobUploadBogusID(t *testing.T) {
 	router := mux.NewRouter()
 	router.HandleFunc("/blob/{id}", UploadHandler).Methods("POST")
 
+	// Get the test-server
+	ts := httptest.NewServer(router)
+	defer ts.Close()
+
 	//
 	// The content we're going to upload
 	//
 	content := []byte("Content goes here, honest")
 
-	req, err := http.NewRequest("POST", "/upload/foo-bar", bytes.NewReader(content))
+	//
+	// Test a bogus name.
+	//
+	url := ts.URL + "/blob/foo-bar"
+
+	resp, err := http.Post(url, url, bytes.NewReader(content))
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(UploadHandler)
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
 
-	handler.ServeHTTP(rr, req)
+	if err != nil {
+		t.Errorf("Failed to read response-body %v\n", err)
+	}
 
-	// Check the status code is what we expect.
-	if status := rr.Code; status != http.StatusInternalServerError {
+	red := fmt.Sprintf("%s", body)
+
+	if status := resp.StatusCode; status != http.StatusInternalServerError {
 		t.Errorf("Unexpected status-code: %v", status)
 	}
 
-	expected := "Alphanumeric IDs only.\n"
-
-	if rr.Body.String() != expected {
-		t.Errorf("Body was '%v' we wanted '%v'",
-			rr.Body.String(), expected)
+	if red != "Alphanumeric IDs only.\n" {
+		t.Errorf("Unexpected status-code: %v", red)
 	}
 
 	//
