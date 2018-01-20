@@ -17,8 +17,6 @@ import (
 // this code - which cannot meaningfully be tested.
 //
 
-
-
 //
 // Options which may be set via flags for the "api-server" subcommand.
 //
@@ -61,7 +59,6 @@ func (p *apiServerCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interfac
 	return subcommands.ExitSuccess
 }
 
-
 //
 // Options which may be set via flags for the "blob-server" subcommand.
 //
@@ -100,8 +97,6 @@ func (p *blobServerCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interfa
 	return subcommands.ExitSuccess
 }
 
-
-
 //
 // Options which may be set via flags for the "replicate" subcommand.
 //
@@ -137,8 +132,6 @@ func (p *replicateCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interfac
 	replicate(*p)
 	return subcommands.ExitSuccess
 }
-
-
 
 //
 // Options which may be set via flags for the "version" subcommand.
