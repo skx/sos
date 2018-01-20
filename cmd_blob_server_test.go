@@ -354,10 +354,14 @@ func TestBlobUpload(t *testing.T) {
 	}
 
 	//
-	// Get the result.
+	// Get the result of the upload, which is a JSON string
+	// which should contain:  "status":"OK"
 	//
 	result := fmt.Sprintf("%s", body)
 
+	//
+	// Test that it does contain that.
+	//
 	if !strings.Contains(result, "\"status\":\"OK\"") {
 		t.Fatalf("Unexpected body: '%s'", result)
 	}
@@ -440,7 +444,144 @@ func TestBlobUploadBogusID(t *testing.T) {
 }
 
 //
-// Test uploading a file with meta-data
+// Test a round-trip of upload & download.
 //
-func TestBlobUploadWithMetaData(t *testing.T) {
+func TestBlobRoundTrip(t *testing.T) {
+
+	//
+	// Create a temporary directory.
+	//
+	p, _ := ioutil.TempDir(os.TempDir(), "prefix")
+
+	//
+	// Init the filesystem storage-class - defined in `cmd_blob_server.go`
+	//
+	STORAGE = new(FilesystemStorage)
+	STORAGE.Setup(p)
+
+	//
+	// Prepare the handlers for upload & download
+	//
+	router := mux.NewRouter()
+	router.HandleFunc("/blob/{id}", UploadHandler).Methods("POST")
+	router.HandleFunc("/blob/{id}", GetHandler).Methods("GET")
+
+	//
+	// Get the test-server
+	//
+	ts := httptest.NewServer(router)
+	defer ts.Close()
+
+	//
+	// The content & filename we're going to upload.
+	//
+	bcontent := []byte("Content goes here, honest")
+	filename := "123456"
+
+	//
+	// Before the upload the file won't exist.
+	//
+	if STORAGE.Exists(filename) {
+		t.Errorf("Exists() was true, pre-upload!")
+	}
+
+	//
+	// Perform the upload.
+	//
+	url := ts.URL + "/blob/" + filename
+
+	//
+	// Here we're performing the HTTP-POST, but we're doing
+	// it in a roundabout fashion so that we can see a "mime-type".
+	//
+	// This is done via the X-Mime-Type header.
+	//
+	client := &http.Client{}
+	req, err := http.NewRequest("POST", url, bytes.NewReader(bcontent))
+	req.Header.Add("X-Mime-Type", "binary/steve")
+	req.Header.Add("X-File-Name", filename)
+	resp, err := client.Do(req)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+
+	//
+	// If we received an error then we're done.
+	//
+	if err != nil {
+		t.Errorf("Failed to read response-body %v\n", err)
+	}
+
+	//
+	// Test the upload succeeded.
+	//
+	if status := resp.StatusCode; status != http.StatusOK {
+		t.Errorf("Unexpected status-code: %v", status)
+	}
+
+	//
+	// Get the result of the upload, which is a JSON string
+	// which should contain:  "status":"OK"
+	//
+	result := fmt.Sprintf("%s", body)
+	if !strings.Contains(result, "\"status\":\"OK\"") {
+		t.Fatalf("Unexpected body: '%s'", result)
+	}
+
+	//
+	// Now the file should exist in the storage-directory
+	//
+	if !STORAGE.Exists(filename) {
+		t.Errorf("Exists('') failed, post-upload!")
+	}
+
+	//
+	// Now we've:
+	//
+	// 1. Uploaded the file.
+	// 2. Tested that this succeeded.
+	//
+	// We need to download it
+	//
+	//
+	req, err = http.NewRequest("GET", "/blob/"+filename, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+	router.ServeHTTP(rr, req)
+
+	// Check the status code is what we expect.
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("Unexpected status-code: %v", status)
+	}
+
+	//
+	// The fake X-Mime-Type header we sent at submission-time
+	// should be visible now.
+	//
+	if rr.Header().Get("Content-Type") != "binary/steve" {
+		t.Errorf("Unexpected content-type: %v", rr.Header().Get("Content-Type"))
+	}
+	if rr.Header().Get("X-File-Name") != filename {
+		t.Errorf("Custom filename wasn't found")
+	}
+
+	//
+	// Check the response body is what we expect.
+	//
+	if rr.Body.String() != string(bcontent) {
+		t.Errorf("handler returned unexpected body: got '%v' want '%v'",
+			rr.Body.String(), bcontent)
+	}
+
+	//
+	// Cleanup the storage-point
+	//
+	os.RemoveAll(p)
+
 }
