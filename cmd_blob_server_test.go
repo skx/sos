@@ -5,6 +5,7 @@
 package main
 
 import (
+	"bytes"
 	"github.com/gorilla/mux"
 	"io/ioutil"
 	"net/http"
@@ -293,4 +294,71 @@ func TestBlobList(t *testing.T) {
 	// Cleanup the storage-point
 	//
 	os.RemoveAll(p)
+}
+
+//
+// Test uploading a file.
+//
+func TestBlobUpload(t *testing.T) {
+
+}
+
+//
+// Test uploading a file with a bogus ID
+//
+func TestBlobUploadBogusID(t *testing.T) {
+	//
+	// Create a temporary directory.
+	//
+	p, _ := ioutil.TempDir(os.TempDir(), "prefix")
+
+	//
+	// Init the filesystem storage-class - defined in `cmd_blob_server.go`
+	//
+	STORAGE = new(FilesystemStorage)
+	STORAGE.Setup(p)
+
+	//
+	// Prepare the handler
+	//
+	router := mux.NewRouter()
+	router.HandleFunc("/blob/{id}", UploadHandler).Methods("POST")
+
+	//
+	// The content we're going to upload
+	//
+	content := []byte("Content goes here, honest")
+
+	req, err := http.NewRequest("POST", "/upload/foo-bar", bytes.NewReader(content))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(UploadHandler)
+
+	handler.ServeHTTP(rr, req)
+
+	// Check the status code is what we expect.
+	if status := rr.Code; status != http.StatusInternalServerError {
+		t.Errorf("Unexpected status-code: %v", status)
+	}
+
+	expected := "Alphanumeric IDs only.\n"
+
+	if rr.Body.String() != expected {
+		t.Errorf("Body was '%v' we wanted '%v'",
+			rr.Body.String(), expected)
+	}
+
+	//
+	// Cleanup the storage-point
+	//
+	os.RemoveAll(p)
+}
+
+//
+// Test uploading a file with meta-data
+//
+func TestBlobUploadWithMetaData(t *testing.T) {
 }

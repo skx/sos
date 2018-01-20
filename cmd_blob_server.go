@@ -208,7 +208,7 @@ func UploadHandler(res http.ResponseWriter, req *http.Request) {
 	//
 	r, _ := regexp.Compile("^([a-z0-9]+)$")
 	if !r.MatchString(id) {
-		fmt.Fprintf(res, "Alphanumeric IDs only.")
+		err = errors.New("Alphanumeric IDs only.")
 		status = http.StatusInternalServerError
 		return
 	}
