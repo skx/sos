@@ -18,6 +18,7 @@ func main() {
 	subcommands.Register(subcommands.HelpCommand(), "")
 	subcommands.Register(subcommands.FlagsCommand(), "")
 	subcommands.Register(subcommands.CommandsCommand(), "")
+	subcommands.Register(&blobServerCmd{}, "")
 	subcommands.Register(&versionCmd{}, "")
 
 	flag.Parse()
