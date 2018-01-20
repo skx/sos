@@ -585,3 +585,40 @@ func TestBlobRoundTrip(t *testing.T) {
 	os.RemoveAll(p)
 
 }
+
+//
+// Test our 404-handler (!)
+//
+func TestMissing(t *testing.T) {
+	router := mux.NewRouter()
+	router.PathPrefix("/").HandlerFunc(MissingHandler)
+
+	//
+	// Each of the methods we test.
+	//
+	methods := []string{"GET", "POST", "HEAD"}
+
+	for _, method := range methods {
+
+		//
+		// Each of the paths we test
+		//
+		paths := []string{"/robots.txt", "/favicon.ico", "/moi.kissa"}
+
+		for _, path := range paths {
+
+			req, err := http.NewRequest(method, path, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			rr := httptest.NewRecorder()
+			router.ServeHTTP(rr, req)
+
+			// Check the status code is what we expect.
+			if status := rr.Code; status != http.StatusNotFound {
+				t.Errorf("Unexpected status-code for %s - %s: %v", method, path, status)
+			}
+		}
+	}
+}
