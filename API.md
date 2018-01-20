@@ -2,11 +2,11 @@
 API
 ---
 
-There are two APIs we present, one from each daemon:
+There are two APIs we present, one from each sub-command:
 
-* `sos-server`
+* `sos api-server`
    * This is the public-facing API which allows objects to be uploaded & downloaded
-* `blob-server`
+* `sos blob-server`
    * This is an implementation-detail.
 
 
@@ -39,7 +39,9 @@ The blob-server is designed to store "data" with an "id".  The data may be any b
 
 The SOS server is the public-facing server which allows uploads and downloads to be made.
 
-**NOTE** The upload & download services run on different ports.
+**NOTE** The upload & download services run on different ports to simplify any
+access-restrictions you might wish to impose.
+
 
 > GET /fetch/${id}
 
