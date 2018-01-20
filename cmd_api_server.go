@@ -26,7 +26,145 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/skx/sos/libconfig"
+	"context"
+	"github.com/google/subcommands"
 )
+
+type apiServerCmd struct {
+	host string
+	blob  string
+	dport  int
+	uport  int
+	dump bool
+}
+
+//
+// Glue
+//
+func (*apiServerCmd) Name() string     { return "api-server" }
+func (*apiServerCmd) Synopsis() string { return "Launch an API-server." }
+func (*apiServerCmd) Usage() string {
+	return `API-server :
+  Launch an API-server to handle the upload/download of objects.
+`
+}
+
+//
+// Flag setup
+//
+func (p *apiServerCmd) SetFlags(f *flag.FlagSet) {
+	flag.StringVar(&p.host, "host", "0.0.0.0", "The IP to listen upon.")
+	flag.StringVar(&p.blob, "blob-server", "", "Comma-separated list of blob-servers to contact.")
+	flag.IntVar(&p.dport, "download-port", 9992, "The port to bind upon for downloading objects.")
+	flag.IntVar(&p.uport, "upload-port", 9991, "The port to bind upon for uploading objects.")
+	flag.BoolVar(&p.dump,"dump", false, "Dump configuration and exit?.")
+}
+
+//
+// Entry-point.
+//
+func (p *apiServerCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
+
+	api_server(*p)
+	return subcommands.ExitSuccess
+}
+
+
+//
+// Entry point.
+//
+func api_server(options apiServerCmd) {
+
+	//
+	// If we received blob-servers on the command-line use them too.
+	//
+	// NOTE: blob-servers added on the command-line are placed in the
+	// "default" group.
+	//
+	if (options.blob != "") {
+		servers := strings.Split(options.blob, ",")
+		for _, entry := range servers {
+			libconfig.AddServer("default", entry)
+		}
+	} else {
+
+		//
+		//  Initialize the servers from our config file(s).
+		//
+		libconfig.InitServers()
+	}
+
+	//
+	// If we're merely dumping the servers then do so now.
+	//
+	if options.dump {
+		fmt.Printf("\t% 10s - %s\n", "group", "server")
+		for _, entry := range libconfig.Servers() {
+			fmt.Printf("\t% 10s - %s\n", entry.Group, entry.Location)
+		}
+		return
+	}
+
+	//
+	// Otherwise show a banner, then launch the server-threads.
+	//
+	fmt.Printf("[Launching API-server]\n")
+	fmt.Printf("\nUpload service\nhttp://%s:%d/upload\n", options.host, options.uport)
+	fmt.Printf("\nDownload service\nhttp://%s:%d/fetch/:id\n", options.host, options.dport)
+
+	//
+	// Show the blob-servers, and their weights
+	//
+	fmt.Printf("\nBlob-servers:\n")
+	fmt.Printf("\t% 10s - %s\n", "group", "server")
+	for _, entry := range libconfig.Servers() {
+		fmt.Printf("\t% 10s - %s\n", entry.Group, entry.Location)
+	}
+	fmt.Printf("\n")
+
+	//
+	// Create a route for uploading.
+	//
+	up_router := mux.NewRouter()
+	up_router.HandleFunc("/upload", APIUploadHandler).Methods("POST")
+	up_router.PathPrefix("/").HandlerFunc(APIMissingHandler)
+
+	//
+	// Create a route for downloading.
+	//
+	down_router := mux.NewRouter()
+	down_router.HandleFunc("/fetch/{id}", APIDownloadHandler).Methods("GET")
+	down_router.PathPrefix("/").HandlerFunc(APIMissingHandler)
+
+	//
+	// The following code is a hack to allow us to run two distinct
+	// HTTP-servers on different ports.
+	//
+	// It's almost sexy the way it worked the first time :)
+	//
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		err := http.ListenAndServe(fmt.Sprintf("%s:%d", options.host, options.uport),
+			up_router)
+		if err != nil {
+			panic(err)
+		}
+		wg.Done()
+	}()
+	wg.Add(1)
+	go func() {
+		err := http.ListenAndServe(fmt.Sprintf("%s:%d", options.host, options.dport),
+			down_router)
+		if err != nil {
+			panic(err)
+		}
+		wg.Done()
+	}()
+	wg.Wait()
+}
+
+
 
 /**
  * This is a helper for allowing us to consume a HTTP-body more than once.
@@ -59,7 +197,7 @@ func (m myReader) Close() error { return nil }
 // lookups.  See `SCALING.md` for more details.
 //
 //
-func UploadHandler(res http.ResponseWriter, req *http.Request) {
+func APIUploadHandler(res http.ResponseWriter, req *http.Request) {
 
 	//
 	// We create a new buffer to hold the request-body.
@@ -169,7 +307,7 @@ func UploadHandler(res http.ResponseWriter, req *http.Request) {
 // lookups.  See `SCALING.md` for more details.
 //
 //
-func DownloadHandler(res http.ResponseWriter, req *http.Request) {
+func APIDownloadHandler(res http.ResponseWriter, req *http.Request) {
 
 	//
 	// The ID of the file we're to retrieve.
@@ -242,112 +380,7 @@ func DownloadHandler(res http.ResponseWriter, req *http.Request) {
 //
 // Fallback handler, returns 404 for all requests.
 //
-func MissingHandler(res http.ResponseWriter, req *http.Request) {
+func APIMissingHandler(res http.ResponseWriter, req *http.Request) {
 	res.WriteHeader(http.StatusNotFound)
 	fmt.Fprintf(res, "Invalid method or location.")
-}
-
-
-/**
- * Entry point to our code.
- */
-func main() {
-
-	//
-	// Parse our command-line arguments.
-	//
-	host := flag.String("host", "0.0.0.0", "The IP to listen upon.")
-	blob := flag.String("blob-server", "", "Comma-separated list of blob-servers to contact.")
-	dport := flag.Int("download-port", 9992, "The port to bind upon for downloading objects.")
-	uport := flag.Int("upload-port", 9991, "The port to bind upon for uploading objects.")
-	dump := flag.Bool("dump", false, "Dump configuration and exit?.")
-	flag.Parse()
-
-	//
-	// If we received blob-servers on the command-line use them too.
-	//
-	// NOTE: blob-servers added on the command-line are placed in the
-	// "default" group.
-	//
-	if (blob != nil) && (*blob != "") {
-		servers := strings.Split(*blob, ",")
-		for _, entry := range servers {
-			libconfig.AddServer("default", entry)
-		}
-	} else {
-
-		//
-		//  Initialize the servers from our config file(s).
-		//
-		libconfig.InitServers()
-	}
-
-	//
-	// If we're merely dumping the servers then do so now.
-	//
-	if *dump {
-		fmt.Printf("\t% 10s - %s\n", "group", "server")
-		for _, entry := range libconfig.Servers() {
-			fmt.Printf("\t% 10s - %s\n", entry.Group, entry.Location)
-		}
-		return
-	}
-
-	//
-	// Otherwise show a banner, then launch the server-threads.
-	//
-	fmt.Printf("[Launching API-server]\n")
-	fmt.Printf("\nUpload service\nhttp://%s:%d/upload\n", *host, *uport)
-	fmt.Printf("\nDownload service\nhttp://%s:%d/fetch/:id\n", *host, *dport)
-
-	//
-	// Show the blob-servers, and their weights
-	//
-	fmt.Printf("\nBlob-servers:\n")
-	fmt.Printf("\t% 10s - %s\n", "group", "server")
-	for _, entry := range libconfig.Servers() {
-		fmt.Printf("\t% 10s - %s\n", entry.Group, entry.Location)
-	}
-	fmt.Printf("\n")
-
-	//
-	// Create a route for uploading.
-	//
-	up_router := mux.NewRouter()
-	up_router.HandleFunc("/upload", UploadHandler).Methods("POST")
-	up_router.PathPrefix("/").HandlerFunc(MissingHandler)
-
-	//
-	// Create a route for downloading.
-	//
-	down_router := mux.NewRouter()
-	down_router.HandleFunc("/fetch/{id}", DownloadHandler).Methods("GET")
-	down_router.PathPrefix("/").HandlerFunc(MissingHandler)
-
-	//
-	// The following code is a hack to allow us to run two distinct
-	// HTTP-servers on different ports.
-	//
-	// It's almost sexy the way it worked the first time :)
-	//
-	wg := &sync.WaitGroup{}
-	wg.Add(1)
-	go func() {
-		err := http.ListenAndServe(fmt.Sprintf("%s:%d", *host, *uport),
-			up_router)
-		if err != nil {
-			panic(err)
-		}
-		wg.Done()
-	}()
-	wg.Add(1)
-	go func() {
-		err := http.ListenAndServe(fmt.Sprintf("%s:%d", *host, *dport),
-			down_router)
-		if err != nil {
-			panic(err)
-		}
-		wg.Done()
-	}()
-	wg.Wait()
 }
