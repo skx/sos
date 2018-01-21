@@ -190,7 +190,7 @@ func APIUploadHandler(res http.ResponseWriter, req *http.Request) {
 		child, _ := http.NewRequest("POST", url, req.Body)
 
 		//
-		// Propogate any incoming X-headers
+		// Propagate any incoming X-headers
 		//
 		for header, value := range req.Header {
 			if strings.HasPrefix(header, "X-") {
