@@ -21,11 +21,12 @@ import (
 // Options which may be set via flags for the "api-server" subcommand.
 //
 type apiServerCmd struct {
-	host  string
-	blob  string
-	dport int
-	uport int
-	dump  bool
+	host    string
+	blob    string
+	dport   int
+	uport   int
+	dump    bool
+	verbose bool
 }
 
 //
@@ -47,7 +48,8 @@ func (p *apiServerCmd) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&p.blob, "blob-server", "", "Comma-separated list of blob-servers to contact.")
 	f.IntVar(&p.dport, "download-port", 9992, "The port to bind upon for downloading objects.")
 	f.IntVar(&p.uport, "upload-port", 9991, "The port to bind upon for uploading objects.")
-	f.BoolVar(&p.dump, "dump", false, "Dump configuration and exit?.")
+	f.BoolVar(&p.dump, "dump", false, "Dump configuration and exit?")
+	f.BoolVar(&p.verbose, "verbose", false, "Show more output from the API-server.")
 }
 
 //

@@ -19,6 +19,12 @@ import (
 )
 
 //
+// The options for this sub-command are copied here so that we
+// can later test if `-verbose` is in-force.
+//
+var OPTIONS apiServerCmd
+
+//
 // Start the upload/download servers running.
 //
 func api_server(options apiServerCmd) {
@@ -53,6 +59,8 @@ func api_server(options apiServerCmd) {
 		return
 	}
 
+	OPTIONS = options
+
 	//
 	// Otherwise show a banner, then launch the server-threads.
 	//
@@ -82,6 +90,7 @@ func api_server(options apiServerCmd) {
 	//
 	down_router := mux.NewRouter()
 	down_router.HandleFunc("/fetch/{id}", APIDownloadHandler).Methods("GET")
+	down_router.HandleFunc("/fetch/{id}", APIDownloadHandler).Methods("HEAD")
 	down_router.PathPrefix("/").HandlerFunc(APIMissingHandler)
 
 	//
@@ -274,15 +283,46 @@ func APIDownloadHandler(res http.ResponseWriter, req *http.Request) {
 	for _, s := range libconfig.OrderedServers() {
 
 		//
-		// Build up a request, which is a HTTP-GET
+		// Show which back-end we're going to use.
+		//
+		if OPTIONS.verbose {
+			fmt.Printf("Attempting retrieval from %s%s%s\n", s.Location, "/blob/", id)
+		}
+
+		//
+		// Build up the request.
 		//
 		response, err := http.Get(fmt.Sprintf("%s%s%s", s.Location, "/blob/", id))
 		//
 		// If there was no error we're good.
 		//
-		if err != nil {
-			fmt.Printf("Error fetching %s from %s%s%s\n",
-				id, s.Location, "/blob/", id)
+		if err != nil || response.StatusCode != 200 {
+
+			//
+			// If there was an error then we skip this server
+			//
+			if err != nil {
+				if OPTIONS.verbose {
+					fmt.Printf("\tError fetching: %s\n", err.Error())
+				}
+			} else {
+
+				//
+				// If there was no error then the HTTP-connection
+				// to the back-end succeeded, but that didn't
+				// return a 200 OK.
+				//
+				// This might happen if a file was uploaded
+				// to only one host, but we've hit another.
+				//
+				// (i.e. Replication is pending.)
+				//
+				if OPTIONS.verbose {
+
+					fmt.Printf("\tStatus Code : %d\n", response.StatusCode)
+				}
+			}
+
 		} else {
 
 			//
@@ -292,6 +332,30 @@ func APIDownloadHandler(res http.ResponseWriter, req *http.Request) {
 			body, _ := ioutil.ReadAll(response.Body)
 
 			if body != nil {
+
+				//
+				// We found a non-empty result on a back-end
+				// server, so we're going to pipe the data
+				// back.
+				if OPTIONS.verbose {
+					fmt.Printf("\tFound, read %d bytes\n", len(body))
+				}
+
+				//
+				// If we found the file, and the body
+				// was non-empty then we'll return
+				// a HTTP-OK response.
+				//
+				// If the request-method was HEAD
+				// and the file isn't found then the 404-result
+				// at the foot of this function will ensure
+				// that a negative response is sent.
+				//
+				if req.Method == "HEAD" {
+					res.Header().Set("Connection", "close")
+					res.WriteHeader(http.StatusOK)
+					return
+				}
 
 				//
 				// Copy any X-Header which was present
@@ -318,8 +382,8 @@ func APIDownloadHandler(res http.ResponseWriter, req *http.Request) {
 	//
 	// Let the caller know.
 	//
+	res.Header().Set("Connection", "close")
 	res.WriteHeader(http.StatusNotFound)
-	fmt.Fprintf(res, "Object not found.")
 }
 
 //

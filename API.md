@@ -48,6 +48,11 @@ access-restrictions you might wish to impose.
 * Fetch the content with the specified ID.
 * Return `HTTP 404` on error.
 
+> HEAD /fetch/${id}
+
+* Return `HTTP 200` if the content exists.
+* Return `HTTP 404` on error, or missing-content.
+
 > POST /upload
 
 * Store the submitted HTTP body in the SOS-server.
