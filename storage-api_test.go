@@ -134,12 +134,11 @@ func TestGet(t *testing.T) {
 	for _, id := range files {
 
 		content, _ := STORAGE.Get(id)
+		string_content := fmt.Sprintf("%s", *content)
 
-		string_content := fmt.Sprintf("%s", id)
-
-		if id != string_content {
+		if string_content != id {
 			t.Errorf("Content of '%s' was not '%s'",
-				id, id)
+				string_content, id)
 		}
 	}
 
