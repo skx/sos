@@ -111,15 +111,17 @@ If all goes well you'll receive a JSON-response as shown, and you can use the ID
 
 At the point you run the upload the contents will only be present on one of the blob-servers, chosen at random.  To ensure your data is replicated you need to (regularly) launch the replication utility:
 
-    $ ./sos replicate -blob-server http://localhost:4001,http://localhost:4002
-           group - server
-         default - http://127.0.0.1:3001
-         default - http://127.0.0.1:3002
-     Syncing group: default
-         Group member: http://127.0.0.1:3001
-         Group member: http://127.0.0.1:3002
-         Object 8b33f235ad2663d770afa35e3a3cea3657088f7f is present on http://127.0.0.1:3002
-         Object 8b33f235ad2663d770afa35e3a3cea3657088f7f is present on http://127.0.0.1:3001
+    $ sos replicate -blob-server http://localhost:4001,http://localhost:4002 --verbose
+	group - server
+	   default - http://localhost:4001
+	   default - http://localhost:4002
+    Syncing group: default
+       Group member: http://localhost:4001
+       Group member: http://localhost:4002
+       Object cd5bd649c4dc46b0bbdf8c94ee53c1198780e430 is missing on http://localhost:4001
+         Mirroring cd5bd649c4dc46b0bbdf8c94ee53c1198780e430 from http://localhost:4002 to http://localhost:4001
+            Fetching :http://localhost:4002/blob/cd5bd649c4dc46b0bbdf8c94ee53c1198780e430
+            Uploading :http://localhost:4001/blob/cd5bd649c4dc46b0bbdf8c94ee53c1198780e430
 
 
 Meta-Data
