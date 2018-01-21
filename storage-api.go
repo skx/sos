@@ -8,7 +8,7 @@
 // It is possible that other users would be interested in storing
 // data inside MySQL, Postgres, Redis, or similar.  To do that
 // should involve only implementing the `StorageHandler` interface
-// and changing `main.go` to construct the new instance.
+// and changing the setup to construct a new instance.
 //
 // We allow "data" to be read or written, by ID.
 //

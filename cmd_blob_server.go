@@ -1,16 +1,13 @@
-/*
- * blob_server.go
- *
- * Trivial blob-server in #golang.
- *
- */
+//
+// Launch our blob-server.
+//
 
 package main
 
 import (
 	"bytes"
 	"encoding/json"
-	"flag"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -26,25 +23,16 @@ import (
 //
 var STORAGE StorageHandler
 
-/**
-* Called via GET /alive
- */
+//
+// Called via GET /alive
+//
 func HealthHandler(res http.ResponseWriter, req *http.Request) {
-	var (
-		status int
-		err    error
-	)
-	defer func() {
-		if nil != err {
-			http.Error(res, err.Error(), status)
-		}
-	}()
 	fmt.Fprintf(res, "alive")
 }
 
-/**
- * Called via GET /blob/XXXXXX
- */
+//
+// Called via GET /blob/XXXXXX
+//
 func GetHandler(res http.ResponseWriter, req *http.Request) {
 	var (
 		status int
@@ -71,7 +59,7 @@ func GetHandler(res http.ResponseWriter, req *http.Request) {
 	r, _ := regexp.Compile("^([a-z0-9]+)$")
 	if !r.MatchString(id) {
 		status = http.StatusInternalServerError
-		fmt.Fprintf(res, "Alphanumeric IDs only.")
+		err = errors.New("Alphanumeric IDs only.")
 		return
 	}
 
@@ -131,17 +119,17 @@ func GetHandler(res http.ResponseWriter, req *http.Request) {
 	}
 }
 
-/**
- * Fallback handler, returns 404 for all requests.
- */
+//
+// Fallback handler, returns 404 for all requests.
+//
 func MissingHandler(res http.ResponseWriter, req *http.Request) {
 	res.WriteHeader(http.StatusNotFound)
 	fmt.Fprintf(res, "404 - content is not hosted here.")
 }
 
-/**
- * List the IDs of all blobs we know about.
- */
+//
+// List the IDs of all blobs we know about.
+//
 func ListHandler(res http.ResponseWriter, req *http.Request) {
 
 	var list []string
@@ -160,9 +148,9 @@ func ListHandler(res http.ResponseWriter, req *http.Request) {
 	}
 }
 
-/**
- * Upload a file to to the public-root.
- */
+//
+// Upload a file to to the public-root.
+//
 func UploadHandler(res http.ResponseWriter, req *http.Request) {
 	var (
 		status int
@@ -191,7 +179,7 @@ func UploadHandler(res http.ResponseWriter, req *http.Request) {
 	//
 	r, _ := regexp.Compile("^([a-z0-9]+)$")
 	if !r.MatchString(id) {
-		fmt.Fprintf(res, "Alphanumeric IDs only.")
+		err = errors.New("Alphanumeric IDs only.")
 		status = http.StatusInternalServerError
 		return
 	}
@@ -201,6 +189,7 @@ func UploadHandler(res http.ResponseWriter, req *http.Request) {
 	//
 	content, err := ioutil.ReadAll(req.Body)
 	if err != nil {
+		err = errors.New("Failed to read body.")
 		status = http.StatusInternalServerError
 		return
 	}
@@ -223,6 +212,7 @@ func UploadHandler(res http.ResponseWriter, req *http.Request) {
 	//
 	result := STORAGE.Store(id, content, extras)
 	if result == false {
+		err = errors.New("Failed to write to storage")
 		status = http.StatusInternalServerError
 		return
 	}
@@ -240,18 +230,10 @@ func UploadHandler(res http.ResponseWriter, req *http.Request) {
 
 }
 
-/**
- * Entry point to our code.
- */
-func main() {
-
-	//
-	// Parse the command-line arguments.
-	//
-	host := flag.String("host", "127.0.0.1", "The IP to listen upon")
-	port := flag.Int("port", 3001, "The port to bind upon")
-	store := flag.String("store", "data", "The location to write the data  to")
-	flag.Parse()
+//
+// Entry point.
+//
+func blob_server(options blobServerCmd) {
 
 	//
 	// Create a storage system.
@@ -261,7 +243,7 @@ func main() {
 	// choose between them via a command-line flag.
 	//
 	STORAGE = new(FilesystemStorage)
-	STORAGE.Setup(*store)
+	STORAGE.Setup(options.store)
 
 	//
 	// Create a new router and our route-mappings.
@@ -278,9 +260,11 @@ func main() {
 	//
 	// Launch the server
 	//
-	fmt.Printf("Launching the server on http://%s:%d\n", *host, *port)
-	err := http.ListenAndServe(fmt.Sprintf("%s:%d", *host, *port), nil)
+	fmt.Printf("blob-server available at http://%s:%d/\nUploads will be written beneath: %s\n",
+		options.host, options.port, options.store)
+	err := http.ListenAndServe(fmt.Sprintf("%s:%d", options.host, options.port), nil)
 	if err != nil {
 		panic(err)
 	}
+
 }

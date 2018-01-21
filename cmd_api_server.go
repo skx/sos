@@ -1,43 +1,127 @@
-/*
- * main.go - API Server
- *
- * Trivial rewrite of the api-server in #golang.
- *
- * Presents two end-points, on two different ports:
- *
- *    http://127.0.0.1:9991/upload
- *
- *    http://127.0.0.1:9992/fetch/:id
- */
+//
+// Launch our API-server.
+//
 
 package main
 
 import (
 	"bytes"
 	"crypto/sha1"
-	"flag"
 	"fmt"
+	"github.com/gorilla/mux"
+	"github.com/skx/sos/libconfig"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"path/filepath"
 	"strings"
 	"sync"
-
-	"github.com/gorilla/mux"
-	"github.com/skx/sos/libconfig"
 )
 
-/**
- * This is a helper for allowing us to consume a HTTP-body more than once.
- */
+//
+// Start the upload/download servers running.
+//
+func api_server(options apiServerCmd) {
+
+	//
+	// If we received blob-servers on the command-line use them too.
+	//
+	// NOTE: blob-servers added on the command-line are placed in the
+	// "default" group.
+	//
+	if options.blob != "" {
+		servers := strings.Split(options.blob, ",")
+		for _, entry := range servers {
+			libconfig.AddServer("default", entry)
+		}
+	} else {
+
+		//
+		//  Initialize the servers from our config file(s).
+		//
+		libconfig.InitServers()
+	}
+
+	//
+	// If we're merely dumping the servers then do so now.
+	//
+	if options.dump {
+		fmt.Printf("\t% 10s - %s\n", "group", "server")
+		for _, entry := range libconfig.Servers() {
+			fmt.Printf("\t% 10s - %s\n", entry.Group, entry.Location)
+		}
+		return
+	}
+
+	//
+	// Otherwise show a banner, then launch the server-threads.
+	//
+	fmt.Printf("[Launching API-server]\n")
+	fmt.Printf("\nUpload service\nhttp://%s:%d/upload\n", options.host, options.uport)
+	fmt.Printf("\nDownload service\nhttp://%s:%d/fetch/:id\n", options.host, options.dport)
+
+	//
+	// Show the blob-servers, and their weights
+	//
+	fmt.Printf("\nBlob-servers:\n")
+	fmt.Printf("\t% 10s - %s\n", "group", "server")
+	for _, entry := range libconfig.Servers() {
+		fmt.Printf("\t% 10s - %s\n", entry.Group, entry.Location)
+	}
+	fmt.Printf("\n")
+
+	//
+	// Create a route for uploading.
+	//
+	up_router := mux.NewRouter()
+	up_router.HandleFunc("/upload", APIUploadHandler).Methods("POST")
+	up_router.PathPrefix("/").HandlerFunc(APIMissingHandler)
+
+	//
+	// Create a route for downloading.
+	//
+	down_router := mux.NewRouter()
+	down_router.HandleFunc("/fetch/{id}", APIDownloadHandler).Methods("GET")
+	down_router.PathPrefix("/").HandlerFunc(APIMissingHandler)
+
+	//
+	// The following code is a hack to allow us to run two distinct
+	// HTTP-servers on different ports.
+	//
+	// It's almost sexy the way it worked the first time :)
+	//
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		err := http.ListenAndServe(fmt.Sprintf("%s:%d", options.host, options.uport),
+			up_router)
+		if err != nil {
+			panic(err)
+		}
+		wg.Done()
+	}()
+	wg.Add(1)
+	go func() {
+		err := http.ListenAndServe(fmt.Sprintf("%s:%d", options.host, options.dport),
+			down_router)
+		if err != nil {
+			panic(err)
+		}
+		wg.Done()
+	}()
+	wg.Wait()
+}
+
+//
+// This is a helper for allowing us to consume a HTTP-body more than once.
+///
 type myReader struct {
 	*bytes.Buffer
 }
 
-/**
- * So that it implements the io.ReadCloser interface
- */
+//
+// So that it implements the io.ReadCloser interface
+//
 func (m myReader) Close() error { return nil }
 
 //
@@ -59,7 +143,7 @@ func (m myReader) Close() error { return nil }
 // lookups.  See `SCALING.md` for more details.
 //
 //
-func UploadHandler(res http.ResponseWriter, req *http.Request) {
+func APIUploadHandler(res http.ResponseWriter, req *http.Request) {
 
 	//
 	// We create a new buffer to hold the request-body.
@@ -169,7 +253,7 @@ func UploadHandler(res http.ResponseWriter, req *http.Request) {
 // lookups.  See `SCALING.md` for more details.
 //
 //
-func DownloadHandler(res http.ResponseWriter, req *http.Request) {
+func APIDownloadHandler(res http.ResponseWriter, req *http.Request) {
 
 	//
 	// The ID of the file we're to retrieve.
@@ -241,111 +325,7 @@ func DownloadHandler(res http.ResponseWriter, req *http.Request) {
 //
 // Fallback handler, returns 404 for all requests.
 //
-func MissingHandler(res http.ResponseWriter, req *http.Request) {
+func APIMissingHandler(res http.ResponseWriter, req *http.Request) {
 	res.WriteHeader(http.StatusNotFound)
 	fmt.Fprintf(res, "Invalid method or location.")
-}
-
-/**
- * Entry point to our code.
- */
-func main() {
-
-	//
-	// Parse our command-line arguments.
-	//
-	host := flag.String("host", "0.0.0.0", "The IP to listen upon.")
-	blob := flag.String("blob-server", "", "Comma-separated list of blob-servers to contact.")
-	dport := flag.Int("download-port", 9992, "The port to bind upon for downloading objects.")
-	uport := flag.Int("upload-port", 9991, "The port to bind upon for uploading objects.")
-	dump := flag.Bool("dump", false, "Dump configuration and exit?.")
-	flag.Parse()
-
-	//
-	// If we received blob-servers on the command-line use them too.
-	//
-	// NOTE: blob-servers added on the command-line are placed in the
-	// "default" group.
-	//
-	if (blob != nil) && (*blob != "") {
-		servers := strings.Split(*blob, ",")
-		for _, entry := range servers {
-			libconfig.AddServer("default", entry)
-		}
-	} else {
-
-		//
-		//  Initialize the servers from our config file(s).
-		//
-		libconfig.InitServers()
-	}
-
-	//
-	// If we're merely dumping the servers then do so now.
-	//
-	if *dump {
-		fmt.Printf("\t% 10s - %s\n", "group", "server")
-		for _, entry := range libconfig.Servers() {
-			fmt.Printf("\t% 10s - %s\n", entry.Group, entry.Location)
-		}
-		return
-	}
-
-	//
-	// Otherwise show a banner, then launch the server-threads.
-	//
-	fmt.Printf("[Launching API-server]\n")
-	fmt.Printf("\nUpload service\nhttp://%s:%d/upload\n", *host, *uport)
-	fmt.Printf("\nDownload service\nhttp://%s:%d/fetch/:id\n", *host, *dport)
-
-	//
-	// Show the blob-servers, and their weights
-	//
-	fmt.Printf("\nBlob-servers:\n")
-	fmt.Printf("\t% 10s - %s\n", "group", "server")
-	for _, entry := range libconfig.Servers() {
-		fmt.Printf("\t% 10s - %s\n", entry.Group, entry.Location)
-	}
-	fmt.Printf("\n")
-
-	//
-	// Create a route for uploading.
-	//
-	up_router := mux.NewRouter()
-	up_router.HandleFunc("/upload", UploadHandler).Methods("POST")
-	up_router.PathPrefix("/").HandlerFunc(MissingHandler)
-
-	//
-	// Create a route for downloading.
-	//
-	down_router := mux.NewRouter()
-	down_router.HandleFunc("/fetch/{id}", DownloadHandler).Methods("GET")
-	down_router.PathPrefix("/").HandlerFunc(MissingHandler)
-
-	//
-	// The following code is a hack to allow us to run two distinct
-	// HTTP-servers on different ports.
-	//
-	// It's almost sexy the way it worked the first time :)
-	//
-	wg := &sync.WaitGroup{}
-	wg.Add(1)
-	go func() {
-		err := http.ListenAndServe(fmt.Sprintf("%s:%d", *host, *uport),
-			up_router)
-		if err != nil {
-			panic(err)
-		}
-		wg.Done()
-	}()
-	wg.Add(1)
-	go func() {
-		err := http.ListenAndServe(fmt.Sprintf("%s:%d", *host, *dport),
-			down_router)
-		if err != nil {
-			panic(err)
-		}
-		wg.Done()
-	}()
-	wg.Wait()
 }
