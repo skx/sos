@@ -5,7 +5,7 @@ API
 There are two APIs we present, one from each sub-command:
 
 * `sos api-server`
-   * This is the public-facing API which allows objects to be uploaded & downloaded
+   * This is the public-facing API which allows objects to be uploaded & downloaded.
 * `sos blob-server`
    * This is an implementation-detail.
 
@@ -17,6 +17,11 @@ The blob-server is designed to store "data" with an "id".  The data may be any b
 > GET /blobs
 
 * Return a JSON array of all known object-IDs.
+
+> DELETE /blob/${id}
+
+* Delete the content with the given ID.
+* Returns a JSON array on success.
 
 > POST /blob/${id}
 
