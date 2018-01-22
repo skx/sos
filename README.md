@@ -6,7 +6,7 @@
 Simple Object Storage, in golang
 --------------------------------
 
-The Simple Object Storage (SOS) is a HTTP-based object-storage system which allows files to be uploaded, and later retrieved by ID.
+The Simple Object Storage (SOS) is a HTTP-based object-storage system which allows files to be uploaded, and later retrieved.
 
 Files can be replicated across a number of hosts to ensure redundancy, and increased availability in the event of hardware failure.
 
@@ -33,8 +33,8 @@ If you prefer to build manually:
      $ cd sos
      $ make
 
-Once built you'll find a single binary `sos`, which implements a number
-of sub-commands to provide various pieces of functionality.
+Once built you'll find a single binary, `sos`, which implements a number
+of sub-commands to provide functionality.
 
 
 
@@ -50,7 +50,8 @@ dumb service which provides three simple operations:
 * Return a list of all known names.
 
 The public API is built upon the top of that primitive, and both are
-launched via the same command:
+launched via the same command `sos`, by specifying the sub-command
+to use:
 
      $ ./sos blob-server ...
      $ ./sos api-server ...
@@ -59,19 +60,23 @@ Here the first command launches a blob-server, which is the back-end for
 storage, and the second command launches the public API server - which is
 what your code/users should operate against.
 
+If you launch `sos` with no arguments you'll see brief details of the
+available subcommands.
+
+
 
 Quick Start
 -----------
 
 In an ideal deployment at least two hosts would be used:
 
-* One host would run the public-server
+* One host would run the public-server.
    * This allows uploads to be made, and later retrieved.
-* Each of the two hosts would also run a blob-server
-   * The blob-servers provide the actual storage of the upload-objects
+* Each of the two hosts would also run a blob-server.
+   * The blob-servers provide the actual storage of the uploaded-objects.
    * The contents of these are replicated out of band.
 
-We can simulate this upon a single host though for the purposes of testing.  You'll just need to make sure you have four terminals open to run the appropriate daemons.
+We can simulate a deployment upon a single host for the purposes of testing.  You'll just need to make sure you have four terminals open to run the appropriate daemons.
 
 First of all you'll want to launch a pair of blob-servers:
 
