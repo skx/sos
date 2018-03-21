@@ -19,10 +19,9 @@ for OS in ${BUILD_PLATFORMS[@]}; do
             SUFFIX=".exe"
         fi
 
-        # Get the dependencies
-        GOARCH=${ARCH} GOOS=${OS} CGO_ENABLED=0 go get -t -v -d $(go list ./...)
+        echo "Building for $OS $ARCH"
 
         # Do the build
-        GOARCH=${ARCH} GOOS=${OS} CGO_ENABLED=0 go build -ldflags "-X main.version=$(git describe --tags)" -o sos-${OS}-${ARCH}${SUFFIX} .
+        GOARCH=${ARCH} GOOS=${OS} CGO_ENABLED=0 go build -ldflags "-X main.version=$(git describe --tags)" -o sos-${OS}-${ARCH}${SUFFIX} -tags=${OS} .
     done
 done

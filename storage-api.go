@@ -87,7 +87,8 @@ func (this *FilesystemStorage) Setup(connection string) {
 	// Now try to secure ourselves
 	//
 	syscall.Chdir(connection)
-	syscall.Chroot(connection)
+
+	SOSChroot(connection)
 }
 
 //
