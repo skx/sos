@@ -9,7 +9,7 @@ matrix:
 
 script:
     - go get -t -v -d $(go list ./...)
-    - go build -ldflags "-X main.version=$(git describe --tags)" .
+    - ./build-all.sh
     - go get golang.org/x/tools/cmd/cover
     - go test -coverprofile fmt
 
@@ -17,7 +17,8 @@ deploy:
   provider: releases
   api_key:
     secure: rOGpAW5icy6VKLTBpcRHfJNWZt72sCBd8dXuscYSziSNWqja5V8fmZHnWnerzkcX61ygZyUlo+Hn2tvOJQaQVSacrbRFXrtvjxy9MkZCK+k7SZn0gWvcBzOE86P4FnR3G8b/WoGvAn9FujhAv2RojBTfPWEqLQeXLZynAXbss7mB6xrBEEAUsdTXouJP+5ENgnaJLtBEDSMc3+MIqAySdqZ28cMarCchJpcguC+FxbEdF4kgBZUDZ0y94tHLlQDT9TiUhz1IbevTL7WmQRAOVacPKlSr3T5E9L/fDvexr6ei6d6BAPwfmenpVUhZcJchu75iKX9X1u5LOiG9hS+mFA+bRNFlh85S/fQwS9r4g5GaZAGPFgjwfQrdYPwJk9YWBuB26ThWNDryfthHGAG1FPKBfDxTZGTrj2Kk2LiK/P/LqD7nHHWD4JUl6BEd1CAVmiW6yroAoIUlUAGaGbZ/NlEQN244gjBAzTZPwEB26H1fVehlW64fMIIzxbpIZKrbLKsIkEEV4eX7xEwT9j8txRIF9EPuOWU5F/XL52Us7cQoW9OKYrEZgW6YVV/V37fGUrCitVveUcx3+KTDsCqXA2+G3x4KXoSs4HL9B1zq1W+TAvRlQQqrwdTTxboNAAEBfD/AxWgOJFcSwf4UqW+s88JXamfFf+GQh7t0jhQAKos=
-  file: sos
+  file_glob: true
+  file: sos-*
   skip_cleanup: true
   on:
     tags: true
