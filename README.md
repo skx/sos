@@ -1,7 +1,7 @@
 [![Travis CI](https://img.shields.io/travis/skx/sos/master.svg?style=flat-square)](https://travis-ci.org/skx/sos)
 [![Go Report Card](https://goreportcard.com/badge/github.com/skx/sos)](https://goreportcard.com/report/github.com/skx/sos)
 [![license](https://img.shields.io/github/license/skx/sos.svg)](https://github.com/skx/sos/blob/master/LICENSE)
-[![Release](https://github-release-version.herokuapp.com/github/skx/sos/release.svg?style=flat)](https://github.com/skx/sos/releases/latest)
+[![Release](https://img.shields.io/github/release/skx/sos.svg)](https://github.com/skx/sos/releases/latest)
 
 Simple Object Storage, in golang
 --------------------------------
