@@ -7,11 +7,12 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/skx/sos/libconfig"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"strings"
+
+	"github.com/skx/sos/libconfig"
 )
 
 //

@@ -7,5 +7,5 @@ import (
 )
 
 func SOSChroot(directory string) {
-       syscall.Chroot(directory)
+	syscall.Chroot(directory)
 }

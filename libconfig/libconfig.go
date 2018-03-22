@@ -29,9 +29,10 @@ package libconfig
 
 import (
 	"bufio"
-	"github.com/go-ini/ini"
 	"os"
 	"strings"
+
+	"github.com/go-ini/ini"
 )
 
 //

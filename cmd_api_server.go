@@ -8,14 +8,15 @@ import (
 	"bytes"
 	"crypto/sha1"
 	"fmt"
-	"github.com/gorilla/mux"
-	"github.com/skx/sos/libconfig"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"path/filepath"
 	"strings"
 	"sync"
+
+	"github.com/gorilla/mux"
+	"github.com/skx/sos/libconfig"
 )
 
 //
