@@ -18,11 +18,6 @@ The blob-server is designed to store "data" with an "id".  The data may be any b
 
 * Return a JSON array of all known object-IDs.
 
-> DELETE /blob/${id}
-
-* Delete the content with the given ID.
-* Returns a JSON array on success.
-
 > POST /blob/${id}
 
 * Store the submitted HTTP body in the blob-server, with the given ID.
