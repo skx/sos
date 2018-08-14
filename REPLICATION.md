@@ -71,6 +71,6 @@ If you wish to have five replicas of all uploaded objects the principle is the s
 Triggering Replication
 ----------------------
 
-Replication is __not__ triggered automatically, although in the future that is an ideal enhancement, to trigger replication you must run the replication script manually:
+Replication is __not__ triggered automatically, although in the future that is an ideal enhancement.  To trigger replication you must run the replication sub-command manually, and regularly:
 
-    $ sos-replicator -verbose
+    $ sos replicate [-verbose]
