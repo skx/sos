@@ -99,7 +99,7 @@ func TestHeadAccess(t *testing.T) {
 	//
 	// Create a temporary directory.
 	//
-	p, _ := ioutil.TempDir(os.TempDir(), "prefix")
+	p, _ := ioutil.TempDir("tmp", "prefix")
 
 	//
 	// Init the filesystem storage-class - defined in `cmd_blob_server.go`
@@ -173,7 +173,7 @@ func TestMissingBlob(t *testing.T) {
 	//
 	// Create a temporary directory.
 	//
-	p, _ := ioutil.TempDir(os.TempDir(), "prefix")
+	p, _ := ioutil.TempDir("tmp", "prefix")
 
 	//
 	// Init the filesystem storage-class - defined in `cmd_blob_server.go`
@@ -228,7 +228,7 @@ func TestBlobList(t *testing.T) {
 	//
 	// Create a temporary directory.
 	//
-	p, _ := ioutil.TempDir(os.TempDir(), "prefix")
+	p, _ := ioutil.TempDir("tmp", "prefix")
 
 	//
 	// Init the filesystem storage-class - defined in `cmd_blob_server.go`
@@ -307,7 +307,7 @@ func TestBlobUpload(t *testing.T) {
 	//
 	// Create a temporary directory.
 	//
-	p, _ := ioutil.TempDir(os.TempDir(), "prefix")
+	p, _ := ioutil.TempDir("tmp", "prefix")
 
 	//
 	// Init the filesystem storage-class - defined in `cmd_blob_server.go`
@@ -388,7 +388,7 @@ func TestBlobUploadBogusID(t *testing.T) {
 	//
 	// Create a temporary directory.
 	//
-	p, _ := ioutil.TempDir(os.TempDir(), "prefix")
+	p, _ := ioutil.TempDir("tmp", "prefix")
 
 	//
 	// Init the filesystem storage-class - defined in `cmd_blob_server.go`
@@ -452,7 +452,7 @@ func TestBlobRoundTrip(t *testing.T) {
 	//
 	// Create a temporary directory.
 	//
-	p, _ := ioutil.TempDir(os.TempDir(), "prefix")
+	p, _ := ioutil.TempDir("tmp", "prefix")
 
 	//
 	// Init the filesystem storage-class - defined in `cmd_blob_server.go`
@@ -483,7 +483,7 @@ func TestBlobRoundTrip(t *testing.T) {
 	// Before the upload the file won't exist.
 	//
 	if STORAGE.Exists(filename) {
-		t.Errorf("Exists() was true, pre-upload - %s", p)
+		t.Errorf("Exists() was true, pre-upload - %s")
 	}
 
 	//
