@@ -21,6 +21,8 @@ func TestList(t *testing.T) {
 	// Create a temporary directory.
 	//
 	p, _ := ioutil.TempDir("tmp", "prefix")
+	os.RemoveAll(p)
+	p, _ = ioutil.TempDir("tmp", "prefix")
 
 	//
 	// Init the filesystem storage-class
@@ -100,6 +102,8 @@ func TestGet(t *testing.T) {
 	// Create a temporary directory.
 	//
 	p, _ := ioutil.TempDir("tmp", "prefix")
+	os.RemoveAll(p)
+	p, _ = ioutil.TempDir("tmp", "prefix")
 
 	//
 	// Init the filesystem storage-class
@@ -157,6 +161,8 @@ func TestStore(t *testing.T) {
 	// Create a temporary directory.
 	//
 	p, _ := ioutil.TempDir("tmp", "prefix")
+	os.RemoveAll(p)
+	p, _ = ioutil.TempDir("tmp", "prefix")
 
 	//
 	// Init the filesystem storage-class
