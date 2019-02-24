@@ -483,7 +483,7 @@ func TestBlobRoundTrip(t *testing.T) {
 	// Before the upload the file won't exist.
 	//
 	if STORAGE.Exists(filename) {
-		t.Errorf("Exists() was true, pre-upload - %s")
+		t.Errorf("Exists() was true, pre-upload")
 	}
 
 	//
