@@ -20,8 +20,10 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strings"
 	"syscall"
 )
@@ -68,6 +70,11 @@ type StorageHandler interface {
 // FilesystemStorage is a concrete type which implements
 // the StorageHandler interface.
 type FilesystemStorage struct {
+	// cwd records whether we're chrooted or not
+	cwd bool
+
+	// prefix holds our prefix directory if we didn't chroot
+	prefix string
 }
 
 //
@@ -81,11 +88,32 @@ func (fss *FilesystemStorage) Setup(connection string) {
 	os.MkdirAll(connection, 0755)
 
 	//
+	// We default to changing to the directory and chrooting
+	//
+	// But we can't do that when testing.
+	//
+	if flag.Lookup("test.v") != nil {
+		fss.cwd = false
+		fss.prefix = connection
+		return
+	}
+
+	//
 	// Now try to secure ourselves
 	//
 	syscall.Chdir(connection)
 
+	//
+	// If we're running our test-cases we don't chroot.
+	//
 	SOSChroot(connection)
+
+	//
+	// Since we're not testing all accesses will be based
+	// upon the current working directory.
+	//
+	fss.cwd = true
+
 }
 
 //
@@ -94,16 +122,25 @@ func (fss *FilesystemStorage) Setup(connection string) {
 func (fss *FilesystemStorage) Get(id string) (*[]byte, map[string]string) {
 
 	//
+	// If we're not using the cwd we need to build up the complete
+	// path to the file.
+	//
+	target := id
+	if fss.cwd == false {
+		target = filepath.Join(fss.prefix, id)
+	}
+
+	//
 	// If the file is missing we return nil.
 	//
-	if _, err := os.Stat(id); os.IsNotExist(err) {
+	if _, err := os.Stat(target); os.IsNotExist(err) {
 		return nil, nil
 	}
 
 	//
 	// Read the file contents
 	//
-	x, err := ioutil.ReadFile(id)
+	x, err := ioutil.ReadFile(target)
 
 	// If there was an error return nil too.
 	if err != nil {
@@ -118,7 +155,7 @@ func (fss *FilesystemStorage) Get(id string) (*[]byte, map[string]string) {
 	//
 	// Attempt to read the meta-data file.
 	//
-	metaData, err := ioutil.ReadFile(id + ".json")
+	metaData, err := ioutil.ReadFile(target + ".json")
 
 	//
 	// If we did then we can decode it
@@ -141,9 +178,18 @@ func (fss *FilesystemStorage) Get(id string) (*[]byte, map[string]string) {
 func (fss *FilesystemStorage) Store(id string, data []byte, params map[string]string) bool {
 
 	//
+	// If we're not using the cwd we need to build up the complete
+	// path to the file.
+	//
+	target := id
+	if fss.cwd == false {
+		target = filepath.Join(fss.prefix, id)
+	}
+
+	//
 	// Write out the data.
 	//
-	err := ioutil.WriteFile(id, data, 0644)
+	err := ioutil.WriteFile(target, data, 0644)
 
 	//
 	// If there was an error we abort.
@@ -171,7 +217,7 @@ func (fss *FilesystemStorage) Store(id string, data []byte, params map[string]st
 		}
 
 		// Write out to a .json-suffixed file.
-		err = ioutil.WriteFile(id+".json", encoded, 0644)
+		err = ioutil.WriteFile(target+".json", encoded, 0644)
 
 		// If the data was saved but the meta-data wasn't
 		// this is still a failure.
@@ -196,7 +242,15 @@ func (fss *FilesystemStorage) Store(id string, data []byte, params map[string]st
 func (fss *FilesystemStorage) Existing() []string {
 	var list []string
 
-	files, _ := ioutil.ReadDir(".")
+	//
+	// If we're not using the cwd we need to use our prefix, explicitly
+	//
+	target := "."
+	if fss.cwd == false {
+		target = fss.prefix
+	}
+
+	files, _ := ioutil.ReadDir(target)
 	for _, f := range files {
 		name := f.Name()
 
@@ -209,7 +263,17 @@ func (fss *FilesystemStorage) Existing() []string {
 
 // Exists tests whether the given ID exists (as a file).
 func (fss *FilesystemStorage) Exists(id string) bool {
-	if _, err := os.Stat(id); os.IsNotExist(err) {
+
+	//
+	// If we're not using the cwd we need to build up the complete
+	// path to the file.
+	//
+	target := id
+	if fss.cwd == false {
+		target = filepath.Join(fss.prefix, id)
+	}
+
+	if _, err := os.Stat(target); os.IsNotExist(err) {
 		return false
 	}
 	return true

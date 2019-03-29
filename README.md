@@ -2,10 +2,10 @@
 [![license](https://img.shields.io/github/license/skx/sos.svg)](https://github.com/skx/sos/blob/master/LICENSE)
 [![Release](https://img.shields.io/github/release/skx/sos.svg)](https://github.com/skx/sos/releases/latest)
 
-Simple Object Storage, in golang
---------------------------------
 
-The Simple Object Storage (SOS) is a HTTP-based object-storage system which allows files to be uploaded, and later retrieved.
+# Simple Object Storage
+
+This Simple Object Storage (SOS) project is a HTTP-based object-storage system which allows files to be uploaded, and later retrieved via HTTP.
 
 Files can be replicated across a number of hosts to ensure redundancy, and increased availability in the event of hardware failure.
 
@@ -15,34 +15,36 @@ Files can be replicated across a number of hosts to ensure redundancy, and incre
 * [The APIs we present, both internal and private](API.md).
 
 
-Installation
-------------
 
-Building the code should pretty idiomatic for a golang user:
+## Installation
 
-     #
-     # Download the code to $GOPATH/src
-     # If already present is should be updated.
-     #
-     go get -u github.com/skx/sos/...
+There are two ways to install this project from source, which depend on the version of the [go](https://golang.org/) version you're using.
 
-If you prefer to build manually:
-
-     $ git clone https://github.com/skx/sos.git
-     $ cd sos
-     $ make
-
-Once built you'll find a single binary, `sos`, which implements a number
-of sub-commands to provide functionality.
+If you just need the binaries you can find them upon the [project release page](https://github.com/skx/sos/releases).
 
 
+### Source Installation go <=  1.11
 
-Overview
---------
+If you're using `go` before 1.11 then the following command should fetch/update `overseer`, and install it upon your system:
+
+     $ go get -u github.com/skx/sos
+
+### Source installation go  >= 1.12
+
+If you're using a more recent version of `go` (which is _highly_ recommended), you need to clone to a directory which is not present upon your `GOPATH`:
+
+    git clone https://github.com/skx/sos
+    cd sos
+    go install
+
+
+
+## Overview
 
 You can read the [design overview](DESIGN.md) for more details, but the
-SOS server relies upon the primitive of a "blob server" - which is a very
-dumb service which provides three simple operations:
+core idea behind the implmentation  relies upon the notion of a
+"blob server" - which is a very simple service which provides only the
+following simple primitives:
 
 * Store a particular chunk of binary data with a specific name.
 * Given a name retrieve the chunk of binary data associated with it.
@@ -64,8 +66,7 @@ available subcommands.
 
 
 
-Quick Start
------------
+## Quick Start
 
 In an ideal deployment at least two hosts would be used:
 
@@ -102,7 +103,7 @@ Now you, or your code, can connect to the server and start uploading/downloading
 
 Providing you've started all three daemons you can now perform a test upload with `curl`:
 
-    $ curl -X POST --data-binary @/etc/passwd  http://localhost:9991/upload
+    $ curl -X POST --data-binary @/etc/passwd http://localhost:9991/upload
     {"id":"cd5bd649c4dc46b0bbdf8c94ee53c1198780e430","size":2306,"status":"OK"}
 
 If all goes well you'll receive a JSON-response as shown, and you can use the ID which is returned to retrieve your object:
@@ -128,8 +129,7 @@ At the point you run the upload the contents will only be present on one of the 
             Uploading :http://localhost:4001/blob/cd5bd649c4dc46b0bbdf8c94ee53c1198780e430
 
 
-Meta-Data
----------
+## Meta-Data
 
 When uploading objects it is often useful to store meta-data, such as the original name of the uploaded object, the owner, or some similar data.  For that reason any header you add to your upload with an `X-`prefix will be stored and returned on download.
 
@@ -158,8 +158,7 @@ Downloading will result in the headers being set:
 
 
 
-Production Usage
-----------------
+## Production Usage
 
 * The API service must be visible to clients, to allow downloads to be made.
     * Because the download service runs on port `9992` it is assumed that corporate firewalls would deny access.
@@ -177,8 +176,7 @@ Production Usage
    * [Read about scaling SoS](SCALING.md)
 
 
-Future Changes?
----------------
+## Future Changes?
 
 It would be possible to switch to using _chunked_ storage, for example breaking up each file that is uploaded into 128Mb sections and treating them as distinct.  The reason that is not done at the moment is because it relies upon state:
 
@@ -192,10 +190,22 @@ It would be possible to switch to using _chunked_ storage, for example breaking 
 At the moment the API-server is stateless, so tracking that data is not possible.  It possible to imagine using [redis](http://redis.io/), or some other external database to record the data, but that increases the complexity of deployment.
 
 
-Questions?
-----------
+## Github Setup
+
+This repository is configured to run tests upon every commit, and when
+pull-requests are created/updated.  The testing is carried out via
+[.github/run-tests.sh](.github/run-tests.sh) which is used by the
+[github-action-tester](https://github.com/skx/github-action-tester) action.
+
+Releases are automated in a similar fashion via [.github/build](.github/build),
+and the [github-action-publish-binaries](https://github.com/skx/github-action-publish-binaries) action.
+
+
+
+## Questions?
 
 Questions/Changes are most welcome; just report an issue.
+
 
 
 

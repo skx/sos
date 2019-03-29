@@ -99,7 +99,10 @@ func TestHeadAccess(t *testing.T) {
 	//
 	// Create a temporary directory.
 	//
-	p, _ := ioutil.TempDir("tmp", "prefix")
+	p, err := ioutil.TempDir("tmp", "prefix")
+	if err != nil {
+		t.Errorf("Failed to create temporary directory %s", err.Error())
+	}
 
 	//
 	// Init the filesystem storage-class - defined in `cmd_blob_server.go`
@@ -119,7 +122,8 @@ func TestHeadAccess(t *testing.T) {
 
 	for _, id := range ids {
 
-		req, err := http.NewRequest("HEAD", id, nil)
+		var req *http.Request
+		req, err = http.NewRequest("HEAD", id, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -129,7 +133,7 @@ func TestHeadAccess(t *testing.T) {
 
 		// Check the status code is what we expect.
 		if status := rr.Code; status != http.StatusNotFound {
-			t.Errorf("Unexpected status-code: %v", status)
+			t.Errorf("Unexpected status-code, pre-create: %v", status)
 		}
 	}
 
@@ -138,7 +142,10 @@ func TestHeadAccess(t *testing.T) {
 	//
 	path := filepath.Join(p, "foo")
 	content := []byte("Content")
-	ioutil.WriteFile(path, content, 0644)
+	err = ioutil.WriteFile(path, content, 0644)
+	if err != nil {
+		fmt.Printf("Error writing content beneath our temporary directory %s", err.Error())
+	}
 
 	//
 	// And repeat the accesses - we should have success now.
@@ -155,7 +162,7 @@ func TestHeadAccess(t *testing.T) {
 
 		// Check the status code is what we expect.
 		if status := rr.Code; status != http.StatusOK {
-			t.Errorf("Unexpected status-code: %v", status)
+			t.Errorf("Unexpected status-code, post-create: %v", status)
 		}
 	}
 
@@ -173,7 +180,10 @@ func TestMissingBlob(t *testing.T) {
 	//
 	// Create a temporary directory.
 	//
-	p, _ := ioutil.TempDir("tmp", "prefix")
+	p, err := ioutil.TempDir("tmp", "prefix")
+	if err != nil {
+		t.Errorf("Failed to create temporary directory %s", err.Error())
+	}
 
 	//
 	// Init the filesystem storage-class - defined in `cmd_blob_server.go`
@@ -228,7 +238,10 @@ func TestBlobList(t *testing.T) {
 	//
 	// Create a temporary directory.
 	//
-	p, _ := ioutil.TempDir("tmp", "prefix")
+	p, err := ioutil.TempDir("tmp", "prefix")
+	if err != nil {
+		t.Errorf("Failed to create temporary directory %s", err.Error())
+	}
 
 	//
 	// Init the filesystem storage-class - defined in `cmd_blob_server.go`
@@ -307,7 +320,10 @@ func TestBlobUpload(t *testing.T) {
 	//
 	// Create a temporary directory.
 	//
-	p, _ := ioutil.TempDir("tmp", "prefix")
+	p, err := ioutil.TempDir("tmp", "prefix")
+	if err != nil {
+		t.Errorf("Failed to create temporary directory %s", err.Error())
+	}
 
 	//
 	// Init the filesystem storage-class - defined in `cmd_blob_server.go`
@@ -388,7 +404,10 @@ func TestBlobUploadBogusID(t *testing.T) {
 	//
 	// Create a temporary directory.
 	//
-	p, _ := ioutil.TempDir("tmp", "prefix")
+	p, err := ioutil.TempDir("tmp", "prefix")
+	if err != nil {
+		t.Errorf("Failed to create temporary directory %s", err.Error())
+	}
 
 	//
 	// Init the filesystem storage-class - defined in `cmd_blob_server.go`
@@ -452,7 +471,10 @@ func TestBlobRoundTrip(t *testing.T) {
 	//
 	// Create a temporary directory.
 	//
-	p, _ := ioutil.TempDir("tmp", "prefix")
+	p, err := ioutil.TempDir("tmp", "prefix")
+	if err != nil {
+		t.Errorf("Failed to create temporary directory %s", err.Error())
+	}
 
 	//
 	// Init the filesystem storage-class - defined in `cmd_blob_server.go`
