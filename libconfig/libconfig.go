@@ -35,8 +35,7 @@ import (
 	"github.com/go-ini/ini"
 )
 
-//
-// This struct represents a blob-server.
+// BlobServer represents a blob-server.
 //
 // The blob-server has:
 //
@@ -54,14 +53,14 @@ type BlobServer struct {
 var servers []BlobServer
 
 //
-// Return the list of servers we've discovered.
+// Servers returns the list of servers we've discovered.
 //
 func Servers() []BlobServer {
 	return (servers)
 }
 
 //
-// Return the name of each group we have defined.
+// Groups returns the name of each group we have defined.
 //
 func Groups() []string {
 	groups := []string{}
@@ -81,7 +80,7 @@ func Groups() []string {
 }
 
 //
-// Return the members of the given group
+// GroupMembers returns the members of the given group
 //
 func GroupMembers(group string) []BlobServer {
 	ret := []BlobServer{}
@@ -96,7 +95,7 @@ func GroupMembers(group string) []BlobServer {
 }
 
 //
-// This returns a priority-ordered list of servers which will be used
+// OrderedServers returns a priority-ordered list of servers which will be used
 // for uploads/downloads.
 //
 // Remember that we have potentially N groups.  We want to pick the first
@@ -140,7 +139,7 @@ func OrderedServers() []BlobServer {
 	//
 	groups := make(map[string]int)
 	for _, entry := range tmp {
-		groups[entry.Group] += 1
+		groups[entry.Group]++
 	}
 
 	//
@@ -179,7 +178,7 @@ func OrderedServers() []BlobServer {
 				tmp[o].Location = "#"
 
 				// We've processed a fresh host
-				processed -= 1
+				processed--
 			}
 		}
 	}
@@ -189,7 +188,7 @@ func OrderedServers() []BlobServer {
 }
 
 //
-// Inititalize our list of servers.
+// InitServers inititalizes our list of servers.
 //
 func InitServers() {
 	ServersLoad("/etc/sos.conf")
@@ -197,7 +196,7 @@ func InitServers() {
 }
 
 //
-// Add an entry to our server-list.
+// AddServer adds an entry to our server-list.
 //
 func AddServer(group string, entry string) {
 	tmp := BlobServer{Location: entry, Group: group}
@@ -205,7 +204,7 @@ func AddServer(group string, entry string) {
 }
 
 //
-// Read/Parse the list of servers from the specified file.
+// ServersLoad reads/parses the list of servers from the specified file.
 //
 func ServersLoad(file string) {
 	inFile, err := os.Open(file)
@@ -225,7 +224,7 @@ func ServersLoad(file string) {
 	//
 	// Does this look like an INI-file?
 	//
-	ini_file := false
+	iniFile := false
 
 	//
 	// Read the input-file line by line
@@ -249,14 +248,14 @@ func ServersLoad(file string) {
 		//
 		if strings.Contains(line, "[") {
 			// This is an INI-file
-			ini_file = true
+			iniFile = true
 		}
 	}
 
 	//
 	// Is this an INI-file?
 	//
-	if ini_file {
+	if iniFile {
 		//
 		// Parse it as an INI-file
 		//
@@ -289,15 +288,15 @@ func ServersLoad(file string) {
 		}
 		return
 
-	} else {
-		//
-		// This was not an INI-file, so we just create a new
-		// entry for each line we read natively.
-		//
-		// We'll call the (anonymous) group "default".
-		for _, s := range tmp {
-			AddServer("default", s)
-		}
+	}
+
+	//
+	// This was not an INI-file, so we just create a new
+	// entry for each line we read natively.
+	//
+	// We'll call the (anonymous) group "default".
+	for _, s := range tmp {
+		AddServer("default", s)
 	}
 }
 
