@@ -18,20 +18,18 @@ import (
 	"github.com/gorilla/mux"
 )
 
-//
-//  The handle to our storage method
-//
+// STORAGE holds a handle to our selected storage-method.
 var STORAGE StorageHandler
 
-//
-// Called via GET /alive
-//
+// HealthHandler is a status end-point which can be polled remotely
+// to test health.
 func HealthHandler(res http.ResponseWriter, req *http.Request) {
 	fmt.Fprintf(res, "alive")
 }
 
+// GetHandler allows a blob to be retrieved by name.
 //
-// Called via GET /blob/XXXXXX
+// This is called with requests like `GET /blob/XXXXXX`.
 //
 func GetHandler(res http.ResponseWriter, req *http.Request) {
 	var (
@@ -59,7 +57,7 @@ func GetHandler(res http.ResponseWriter, req *http.Request) {
 	r, _ := regexp.Compile("^([a-z0-9]+)$")
 	if !r.MatchString(id) {
 		status = http.StatusInternalServerError
-		err = errors.New("Alphanumeric IDs only.")
+		err = errors.New("alphanumeric IDs only")
 		return
 	}
 
@@ -119,17 +117,16 @@ func GetHandler(res http.ResponseWriter, req *http.Request) {
 	}
 }
 
-//
-// Fallback handler, returns 404 for all requests.
-//
+// MissingHandler is a handler which is used as a fall-back if no matching
+// handler is found.
 func MissingHandler(res http.ResponseWriter, req *http.Request) {
 	res.WriteHeader(http.StatusNotFound)
 	fmt.Fprintf(res, "404 - content is not hosted here.")
 }
 
+// ListHandler returns the IDs of all blobs we know about.
 //
-// List the IDs of all blobs we know about.
-//
+// This is used by the replication utility.
 func ListHandler(res http.ResponseWriter, req *http.Request) {
 
 	var list []string
@@ -148,9 +145,7 @@ func ListHandler(res http.ResponseWriter, req *http.Request) {
 	}
 }
 
-//
-// Upload a file to to the public-root.
-//
+// UploadHandler is invoked to handle storing data in the blob-server.
 func UploadHandler(res http.ResponseWriter, req *http.Request) {
 	var (
 		status int
@@ -179,7 +174,7 @@ func UploadHandler(res http.ResponseWriter, req *http.Request) {
 	//
 	r, _ := regexp.Compile("^([a-z0-9]+)$")
 	if !r.MatchString(id) {
-		err = errors.New("Alphanumeric IDs only.")
+		err = errors.New("alphanumeric IDs only")
 		status = http.StatusInternalServerError
 		return
 	}
@@ -189,7 +184,7 @@ func UploadHandler(res http.ResponseWriter, req *http.Request) {
 	//
 	content, err := ioutil.ReadAll(req.Body)
 	if err != nil {
-		err = errors.New("Failed to read body.")
+		err = errors.New("failed to read body")
 		status = http.StatusInternalServerError
 		return
 	}
@@ -212,7 +207,7 @@ func UploadHandler(res http.ResponseWriter, req *http.Request) {
 	//
 	result := STORAGE.Store(id, content, extras)
 	if result == false {
-		err = errors.New("Failed to write to storage")
+		err = errors.New("failed to write to storage")
 		status = http.StatusInternalServerError
 		return
 	}
@@ -230,10 +225,8 @@ func UploadHandler(res http.ResponseWriter, req *http.Request) {
 
 }
 
-//
-// Entry point.
-//
-func blob_server(options blobServerCmd) {
+// blobServer is our entry-point to the sub-command.
+func blobServer(options blobServerCmd) {
 
 	//
 	// Create a storage system.

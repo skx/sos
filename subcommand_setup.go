@@ -58,7 +58,7 @@ func (p *apiServerCmd) SetFlags(f *flag.FlagSet) {
 //
 func (p *apiServerCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
 
-	api_server(*p)
+	apiServer(*p)
 	return subcommands.ExitSuccess
 }
 
@@ -96,7 +96,7 @@ func (p *blobServerCmd) SetFlags(f *flag.FlagSet) {
 //
 func (p *blobServerCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
 
-	blob_server(*p)
+	blobServer(*p)
 	return subcommands.ExitSuccess
 }
 

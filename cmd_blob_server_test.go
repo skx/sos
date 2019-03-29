@@ -49,7 +49,7 @@ func TestGetIDNames(t *testing.T) {
 		}
 
 		// Check the response body is what we expect.
-		expected := "Alphanumeric IDs only.\n"
+		expected := "alphanumeric IDs only\n"
 		if rr.Body.String() != expected {
 			t.Errorf("handler returned unexpected body: got '%v' want '%v'",
 				rr.Body.String(), expected)
@@ -434,7 +434,7 @@ func TestBlobUploadBogusID(t *testing.T) {
 		t.Errorf("Unexpected status-code: %v", status)
 	}
 
-	if red != "Alphanumeric IDs only.\n" {
+	if red != "alphanumeric IDs only\n" {
 		t.Errorf("Unexpected status-code: %v", red)
 	}
 

@@ -19,16 +19,14 @@ import (
 	"github.com/skx/sos/libconfig"
 )
 
-//
-// The options for this sub-command are copied here so that we
-// can later test if `-verbose` is in-force.
-//
+// OPTIONS holds options passed to this sub-command, so that we can later
+// test if `-verbose` is in-force.
 var OPTIONS apiServerCmd
 
 //
 // Start the upload/download servers running.
 //
-func api_server(options apiServerCmd) {
+func apiServer(options apiServerCmd) {
 
 	//
 	// If we received blob-servers on the command-line use them too.
@@ -82,17 +80,17 @@ func api_server(options apiServerCmd) {
 	//
 	// Create a route for uploading.
 	//
-	up_router := mux.NewRouter()
-	up_router.HandleFunc("/upload", APIUploadHandler).Methods("POST")
-	up_router.PathPrefix("/").HandlerFunc(APIMissingHandler)
+	upRouter := mux.NewRouter()
+	upRouter.HandleFunc("/upload", APIUploadHandler).Methods("POST")
+	upRouter.PathPrefix("/").HandlerFunc(APIMissingHandler)
 
 	//
 	// Create a route for downloading.
 	//
-	down_router := mux.NewRouter()
-	down_router.HandleFunc("/fetch/{id}", APIDownloadHandler).Methods("GET")
-	down_router.HandleFunc("/fetch/{id}", APIDownloadHandler).Methods("HEAD")
-	down_router.PathPrefix("/").HandlerFunc(APIMissingHandler)
+	downRouter := mux.NewRouter()
+	downRouter.HandleFunc("/fetch/{id}", APIDownloadHandler).Methods("GET")
+	downRouter.HandleFunc("/fetch/{id}", APIDownloadHandler).Methods("HEAD")
+	downRouter.PathPrefix("/").HandlerFunc(APIMissingHandler)
 
 	//
 	// The following code is a hack to allow us to run two distinct
@@ -104,7 +102,7 @@ func api_server(options apiServerCmd) {
 	wg.Add(1)
 	go func() {
 		err := http.ListenAndServe(fmt.Sprintf("%s:%d", options.host, options.uport),
-			up_router)
+			upRouter)
 		if err != nil {
 			panic(err)
 		}
@@ -113,7 +111,7 @@ func api_server(options apiServerCmd) {
 	wg.Add(1)
 	go func() {
 		err := http.ListenAndServe(fmt.Sprintf("%s:%d", options.host, options.dport),
-			down_router)
+			downRouter)
 		if err != nil {
 			panic(err)
 		}
@@ -134,8 +132,7 @@ type myReader struct {
 //
 func (m myReader) Close() error { return nil }
 
-//
-// Upload-handler.
+// APIUploadHandler handles uploads to the API server.
 //
 // This should attempt to upload against the blob-servers and return
 // when that is complete.  If there is a failure then it should
@@ -245,7 +242,7 @@ func APIUploadHandler(res http.ResponseWriter, req *http.Request) {
 }
 
 //
-// Download-handler.
+// APIDownloadHandler handles downloads from the API server.
 //
 // This should attempt to download against the blob-servers and return
 // when that is complete.  If there is a failure then it should
@@ -387,9 +384,8 @@ func APIDownloadHandler(res http.ResponseWriter, req *http.Request) {
 	res.WriteHeader(http.StatusNotFound)
 }
 
-//
-// Fallback handler, returns 404 for all requests.
-//
+// APIMissingHandler is a fall-back handler for all requests which are
+// neither upload nor download.
 func APIMissingHandler(res http.ResponseWriter, req *http.Request) {
 	res.WriteHeader(http.StatusNotFound)
 	fmt.Fprintf(res, "Invalid method or location.")
