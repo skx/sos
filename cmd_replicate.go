@@ -15,12 +15,10 @@ import (
 	"github.com/skx/sos/libconfig"
 )
 
-//
-// Get the objects on the given server
-//
+// Objects reads the list of objects on the given server
 func Objects(server string) []string {
-	type list_strings []string
-	var tmp list_strings
+	type listStrings []string
+	var tmp listStrings
 
 	//
 	// Make the request to get the list of objects.
@@ -48,29 +46,26 @@ func Objects(server string) []string {
 	return tmp
 }
 
-//
-// Does the given server contain the given object?
-//
+// HasObject tests if the specified server contains the given object.
 func HasObject(server string, object string) bool {
 
 	response, err := http.Head(server + "/blob/" + object)
 	if err != nil {
 		fmt.Printf("Error Fetching: %s/blob/%s\n", server, object)
 		return false
-	} else {
-		if response.StatusCode == 200 {
-			fmt.Printf("\tObject %s is present on %s\n", object, server)
-			return true
-		} else {
-			fmt.Printf("\tObject %s is missing on %s\n", object, server)
-			return false
-		}
 	}
+
+	if response.StatusCode == 200 {
+		fmt.Printf("\tObject %s is present on %s\n", object, server)
+		return true
+	}
+
+	fmt.Printf("\tObject %s is missing on %s\n", object, server)
+	return false
 }
 
-//
-// Mirror the given object.
-//
+// MirrorObject attempts to replicate the specified object between the two
+// listed hosts.
 func MirrorObject(src string, dst string, obj string, options replicateCmd) bool {
 
 	if options.verbose {
@@ -80,10 +75,10 @@ func MirrorObject(src string, dst string, obj string, options replicateCmd) bool
 	//
 	// Prepare to download the object.
 	//
-	src_url := fmt.Sprintf("%s%s%s", src, "/blob/", obj)
-	fmt.Printf("\tFetching :%s\n", src_url)
+	srcURL := fmt.Sprintf("%s%s%s", src, "/blob/", obj)
+	fmt.Printf("\tFetching :%s\n", srcURL)
 
-	response, err := http.Get(src_url)
+	response, err := http.Get(srcURL)
 
 	//
 	// If there was an error we're done.
@@ -98,13 +93,13 @@ func MirrorObject(src string, dst string, obj string, options replicateCmd) bool
 	// Prepare to POST the body we've downloaded to
 	// the mirror-location
 	//
-	dst_url := fmt.Sprintf("%s%s%s", dst, "/blob/", obj)
-	fmt.Printf("\tUploading :%s\n", dst_url)
+	dstURL := fmt.Sprintf("%s%s%s", dst, "/blob/", obj)
+	fmt.Printf("\tUploading :%s\n", dstURL)
 
 	//
 	// Build up a new request.
 	//
-	child, _ := http.NewRequest("POST", dst_url, response.Body)
+	child, _ := http.NewRequest("POST", dstURL, response.Body)
 
 	//
 	// Copy any X-Header which was present
@@ -126,16 +121,14 @@ func MirrorObject(src string, dst string, obj string, options replicateCmd) bool
 	// If there was no error we're good.
 	//
 	if err != nil {
-		fmt.Printf("Error sending to %s - %s\n", dst_url, r.Body)
+		fmt.Printf("Error sending to %s - %s\n", dstURL, r.Body)
 		return false
 	}
 
 	return true
 }
 
-//
-// Sync the members of the set we're given.
-//
+// SyncGroup syncs the contents of the specified hosts.
 func SyncGroup(servers []libconfig.BlobServer, options replicateCmd) {
 	//
 	// If we're being verbose show the members
@@ -201,9 +194,7 @@ func SyncGroup(servers []libconfig.BlobServer, options replicateCmd) {
 	}
 }
 
-//
-// This is where the main-work happens.
-//
+// replicate is the entry-point to this sub-command.
 func replicate(options replicateCmd) {
 
 	//

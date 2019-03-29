@@ -26,9 +26,7 @@ import (
 	"syscall"
 )
 
-//
-//  This is the virtual interface for a storage class.
-//
+// StorageHandler is the interface for a storage class.
 type StorageHandler interface {
 
 	//
@@ -67,16 +65,15 @@ type StorageHandler interface {
 	Exists(id string) bool
 }
 
-//
-// A concrete type which implements our interface.
-//
+// FilesystemStorage is a concrete type which implements
+// the StorageHandler interface.
 type FilesystemStorage struct {
 }
 
 //
 // Setup method to ensure we have a data-directory.
 //
-func (this *FilesystemStorage) Setup(connection string) {
+func (fss *FilesystemStorage) Setup(connection string) {
 
 	//
 	// If the data-directory does not exist create it.
@@ -94,7 +91,7 @@ func (this *FilesystemStorage) Setup(connection string) {
 //
 // Get the contents of a given ID.
 //
-func (this *FilesystemStorage) Get(id string) (*[]byte, map[string]string) {
+func (fss *FilesystemStorage) Get(id string) (*[]byte, map[string]string) {
 
 	//
 	// If the file is missing we return nil.
@@ -121,28 +118,27 @@ func (this *FilesystemStorage) Get(id string) (*[]byte, map[string]string) {
 	//
 	// Attempt to read the meta-data file.
 	//
-	meta_data, err := ioutil.ReadFile(id + ".json")
+	metaData, err := ioutil.ReadFile(id + ".json")
 
 	//
 	// If we did then we can decode it
 	//
 	if err == nil {
-		json.Unmarshal([]byte(meta_data), &meta)
+		json.Unmarshal([]byte(metaData), &meta)
 		return &x, meta
-	} else {
-
-		//
-		// There was a failure to unmarshal the meta-data
-		// just return the actual data.
-		//
-		return &x, nil
 	}
+
+	//
+	// There was a failure to unmarshal the meta-data
+	// just return the actual data.
+	//
+	return &x, nil
 }
 
 //
 // Store the specified data against the given file.
 //
-func (this *FilesystemStorage) Store(id string, data []byte, params map[string]string) bool {
+func (fss *FilesystemStorage) Store(id string, data []byte, params map[string]string) bool {
 
 	//
 	// Write out the data.
@@ -192,13 +188,12 @@ func (this *FilesystemStorage) Store(id string, data []byte, params map[string]s
 	return true
 }
 
-//
-// Get all known IDs.
+// Existing returns all known IDs.
 //
 // We assume we've been chdir() + chroot() into the data-directory
 // so we just need to read the filenames we can find.
 //
-func (this *FilesystemStorage) Existing() []string {
+func (fss *FilesystemStorage) Existing() []string {
 	var list []string
 
 	files, _ := ioutil.ReadDir(".")
@@ -212,13 +207,10 @@ func (this *FilesystemStorage) Existing() []string {
 	return list
 }
 
-//
-// Does the given ID exist (as a file)?
-//
-func (this *FilesystemStorage) Exists(id string) bool {
+// Exists tests whether the given ID exists (as a file).
+func (fss *FilesystemStorage) Exists(id string) bool {
 	if _, err := os.Stat(id); os.IsNotExist(err) {
 		return false
-	} else {
-		return true
 	}
+	return true
 }

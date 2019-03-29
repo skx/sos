@@ -138,11 +138,11 @@ func TestGet(t *testing.T) {
 	for _, id := range files {
 
 		content, _ := STORAGE.Get(id)
-		string_content := fmt.Sprintf("%s", *content)
+		stringContent := fmt.Sprintf("%s", *content)
 
-		if string_content != id {
+		if stringContent != id {
 			t.Errorf("Content of '%s' was not '%s'",
-				string_content, id)
+				stringContent, id)
 		}
 	}
 
@@ -210,8 +210,8 @@ func TestStore(t *testing.T) {
 		//
 		// Retrieve it to ensure the meta-data matches
 		//
-		_, meta_out := STORAGE.Get(id)
-		if meta_out["filename"] != meta["filename"] {
+		_, metaOut := STORAGE.Get(id)
+		if metaOut["filename"] != meta["filename"] {
 			t.Errorf("meta-data mismatch after round-trip!")
 		}
 	}
