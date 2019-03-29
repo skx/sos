@@ -210,8 +210,8 @@ func TestStore(t *testing.T) {
 		//
 		// Retrieve it to ensure the meta-data matches
 		//
-		_, meta_out := STORAGE.Get(id)
-		if meta_out["filename"] != meta["filename"] {
+		_, metaOut := STORAGE.Get(id)
+		if metaOut["filename"] != meta["filename"] {
 			t.Errorf("meta-data mismatch after round-trip!")
 		}
 	}
